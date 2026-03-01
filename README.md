@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/atiny-logo.png" alt="ATiny Logo" width="200"/>
+  <img src="assets/atiny-logo.png" alt="ATiny Logo" width="500"/>
 </p>
 
 <h1 align="center">ATiny</h1>
