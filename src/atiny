@@ -1,0 +1,370 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ATINY_VERSION="1.0.0"
+
+# ATiny core (NOT the installer)
+# Short commands for Windows users:
+# - ainstall, term, search, supdate, list, run/start, helptiny, mantiny
+# Pro mode: -p / --pro
+
+SELF="$(basename "$0")"
+
+has() { command -v "$1" >/dev/null 2>&1; }
+die() { echo "ATiny: $*" >&2; exit 1; }
+need_arg() { [[ $# -ge 1 && -n "${1:-}" ]] || die "missing argument"; }
+is_pro() { [[ "${1:-}" == "-p" || "${1:-}" == "--pro" ]]; }
+
+# Allow: atiny <subcommand> ... OR direct aliases (ainstall, term, etc.)
+CMD="$SELF"
+if [[ "$SELF" == "atiny" ]]; then
+  case "${1:-}" in
+    "" ) die "usage: atiny <command> [args]";;
+    --version|-v) echo "ATiny v$ATINY_VERSION"; exit 0;;
+    --help|-h|help) CMD="helptiny"; shift || true;;
+    *) CMD="$1"; shift;;
+  esac
+fi
+
+detect_pm() {
+  if has apt-get || has apt; then echo "apt"; return; fi
+  if has dnf; then echo "dnf"; return; fi
+  if has pacman; then echo "pacman"; return; fi
+  if has zypper; then echo "zypper"; return; fi
+  echo ""
+}
+
+# ---------- Native ----------
+native_install() {
+  local name="$1"; local pm; pm="$(detect_pm)"; [[ -n "$pm" ]] || return 1
+  case "$pm" in
+    apt)
+      if has apt-get; then sudo apt-get update -y && sudo apt-get install -y "$name"
+      else sudo apt update -y && sudo apt install -y "$name"; fi
+      ;;
+    dnf) sudo dnf install -y "$name" ;;
+    pacman) sudo pacman -S --noconfirm "$name" ;;
+    zypper) sudo zypper install -y "$name" ;;
+    *) return 1 ;;
+  esac
+}
+
+native_remove() {
+  local name="$1"; local pm; pm="$(detect_pm)"; [[ -n "$pm" ]] || return 1
+  case "$pm" in
+    apt)
+      if has apt-get; then sudo apt-get remove -y "$name"
+      else sudo apt remove -y "$name"; fi
+      ;;
+    dnf) sudo dnf remove -y "$name" ;;
+    pacman) sudo pacman -Rns --noconfirm "$name" ;;
+    zypper) sudo zypper remove -y "$name" ;;
+    *) return 1 ;;
+  esac
+}
+
+native_search_raw() {
+  local q="$1"; local pm; pm="$(detect_pm)"; [[ -n "$pm" ]] || return 1
+  case "$pm" in
+    apt) apt-cache search "$q" ;;
+    dnf) dnf search "$q" --all --quiet ;;
+    pacman) pacman -Ss "$q" ;;
+    zypper) zypper search -s "$q" ;;
+    *) return 1 ;;
+  esac
+}
+
+native_is_installed() {
+  local name="$1"; local pm; pm="$(detect_pm)"; [[ -n "$pm" ]] || return 1
+  case "$pm" in
+    apt) dpkg -s "$name" >/dev/null 2>&1 ;;
+    dnf) rpm -q "$name" >/dev/null 2>&1 ;;
+    pacman) pacman -Q "$name" >/dev/null 2>&1 ;;
+    zypper) rpm -q "$name" >/dev/null 2>&1 ;;
+    *) return 1 ;;
+  esac
+}
+
+# ---------- Flatpak ----------
+flatpak_install() { has flatpak || return 1; flatpak install -y flathub "$1"; }
+flatpak_remove() { has flatpak || return 1; flatpak uninstall -y "$1"; }
+flatpak_search_raw() { has flatpak || return 1; flatpak search "$1"; }
+flatpak_list_apps() { has flatpak || return 1; flatpak list --app --columns=application,name; }
+
+flatpak_find_installed_id() {
+  has flatpak || return 1
+  local q="$1"
+  local id=""
+  id="$(flatpak list --app --columns=application 2>/dev/null | grep -i "^$q$" | head -n 1 || true)"
+  [[ -n "$id" ]] && { echo "$id"; return 0; }
+  id="$(flatpak list --app --columns=application 2>/dev/null | grep -i "$q" | head -n 1 || true)"
+  [[ -n "$id" ]] && { echo "$id"; return 0; }
+  return 1
+}
+
+# ---------- Snap ----------
+snap_install() { has snap || return 1; sudo snap install "$1"; }
+snap_remove() { has snap || return 1; sudo snap remove "$1"; }
+snap_search_raw() { has snap || return 1; snap find "$1"; }
+snap_list_apps() { has snap || return 1; snap list; }
+
+snap_find_installed_name() {
+  has snap || return 1
+  local q="$1"
+  local name=""
+  name="$(snap list 2>/dev/null | awk 'NR>1{print $1}' | grep -i "^$q$" | head -n 1 || true)"
+  [[ -n "$name" ]] && { echo "$name"; return 0; }
+  name="$(snap list 2>/dev/null | awk 'NR>1{print $1}' | grep -i "$q" | head -n 1 || true)"
+  [[ -n "$name" ]] && { echo "$name"; return 0; }
+  return 1
+}
+
+# ---------- Human-ish search (simple) ----------
+is_helper_pkg() {
+  local p="${1,,}"
+  [[ "$p" == lib* ]] && return 0
+  [[ "$p" == *-dev ]] && return 0
+  [[ "$p" == *-common ]] && return 0
+  [[ "$p" == *-data ]] && return 0
+  [[ "$p" == *soundfont* ]] && return 0
+  [[ "$p" == *font* ]] && return 0
+  return 1
+}
+
+human_search_system() {
+  local q="$1"
+  local pm; pm="$(detect_pm)"
+  [[ -n "$pm" ]] || return 1
+  case "$pm" in
+    apt) apt-cache search "$q" | awk -F' - ' 'NF>=2{print $1 " — " $2}' ;;
+    dnf) dnf search "$q" --all --quiet 2>/dev/null | awk -F' : ' 'NF>=2{print $1 " — " $2}' ;;
+    pacman) pacman -Ss "$q" 2>/dev/null | awk 'NR%2==1{split($1,a,"/"); pkg=a[2]; getline; d=$0; sub(/^[[:space:]]+/,"",d); print pkg " — " d}' ;;
+    zypper) zypper search -s "$q" 2>/dev/null | awk -F'\\|' 'NF>=4{gsub(/^[ \t]+|[ \t]+$/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$4); if($2!="Name" && $2!="") print $2 " — " $4}' ;;
+  esac
+}
+
+# ---------- Commands ----------
+cmd_helptiny() {
+  cat <<'TXT'
+ATiny commands:
+
+Install:
+  ainstall <name>        system -> flatpak -> snap
+  finstall <name>        flatpak only
+  sinstall <name>        snap only
+
+Remove:
+  term <name>            remove installed (system/flatpak/snap)
+  fterm <name>           flatpak only
+  sterm <name>           snap only
+
+Search:
+  search <query>         beginner-friendly
+  search -p <query>      pro/raw output
+
+Update:
+  supdate                update everything
+
+List:
+  list                   installed apps (simple)
+  list -p                installed apps (pro)
+
+Run:
+  run <name>
+  start <name>
+
+Help:
+  helptiny
+  mantiny <command>
+
+Version:
+  atiny --version
+TXT
+}
+
+cmd_mantiny() {
+  need_arg "${1:-}"
+  case "$1" in
+    ainstall) echo "ainstall <name>  Installs via system, then flatpak, then snap.";;
+    term) echo "term <name>  Removes the installed package/app (system/flatpak/snap).";;
+    search) echo "search <query>  Friendly search. Use: search -p <query> for raw output.";;
+    supdate) echo "supdate  Updates system packages + flatpak + snap (if installed).";;
+    list) echo "list  Shows installed apps. Use list -p for more details.";;
+    run|start) echo "run <name>  Tries flatpak, then snap, then native command/launcher.";;
+    *) echo "No manual entry for '$1'. Try: helptiny";;
+  esac
+}
+
+cmd_ainstall() {
+  need_arg "${1:-}"
+  local name="$1"
+  echo "Installing: $name"
+
+  if native_install "$name" >/dev/null 2>&1; then echo "$name installed (system)"; return 0; fi
+  if has flatpak && flatpak_install "$name" >/dev/null 2>&1; then echo "$name installed (flatpak)"; return 0; fi
+  if has snap && snap_install "$name" >/dev/null 2>&1; then echo "$name installed (snap)"; return 0; fi
+
+  die "could not install '$name'"
+}
+
+cmd_finstall(){ need_arg "${1:-}"; has flatpak || die "flatpak not installed"; flatpak_install "$1"; }
+cmd_sinstall(){ need_arg "${1:-}"; has snap || die "snap not installed"; snap_install "$1"; }
+
+cmd_term() {
+  need_arg "${1:-}"
+  local name="$1"
+  echo "Removing: $name"
+
+  if native_is_installed "$name" && native_remove "$name" >/dev/null 2>&1; then echo "$name removed (system)"; return 0; fi
+
+  if has flatpak; then
+    local fid=""; fid="$(flatpak_find_installed_id "$name" || true)"
+    if [[ -n "$fid" ]] && flatpak_remove "$fid" >/dev/null 2>&1; then echo "$name removed (flatpak)"; return 0; fi
+  fi
+
+  if has snap; then
+    local sn=""; sn="$(snap_find_installed_name "$name" || true)"
+    if [[ -n "$sn" ]] && snap_remove "$sn" >/dev/null 2>&1; then echo "$name removed (snap)"; return 0; fi
+  fi
+
+  die "could not remove '$name' (not installed?)"
+}
+
+cmd_fterm(){ need_arg "${1:-}"; has flatpak || die "flatpak not installed"; flatpak_remove "$1"; }
+cmd_sterm(){ need_arg "${1:-}"; has snap || die "snap not installed"; snap_remove "$1"; }
+
+cmd_search() {
+  if is_pro "${1:-}"; then
+    shift
+    need_arg "${1:-}"
+    local q="$1"
+    echo "=== system ==="
+    native_search_raw "$q" 2>/dev/null | head -n 160 || echo "(no system pm detected)"
+    echo
+    echo "=== flatpak ==="
+    (has flatpak && flatpak_search_raw "$q" | head -n 120) || echo "(flatpak not installed)"
+    echo
+    echo "=== snap ==="
+    (has snap && snap_search_raw "$q" | head -n 120) || echo "(snap not installed)"
+    return 0
+  fi
+
+  need_arg "${1:-}"
+  local q="$1"
+  echo "Results for: $q"
+  echo
+
+  if detect_pm >/dev/null 2>&1 && [[ -n "$(detect_pm)" ]]; then
+    echo "Top system matches:"
+    human_search_system "$q" 2>/dev/null | while IFS= read -r line; do
+      pkg="${line%% — *}"
+      if ! is_helper_pkg "$pkg"; then echo "  - $line"; fi
+    done | head -n 10
+    echo
+  fi
+
+  if has flatpak; then
+    echo "Flatpak matches (apps):"
+    flatpak search --columns=application,name "$q" 2>/dev/null | head -n 12 | sed 's/^/  - /'
+    echo
+  fi
+
+  if has snap; then
+    echo "Snap matches:"
+    snap find "$q" 2>/dev/null | awk 'NR>1{print "  - " $1 " — " $4}' | head -n 12
+    echo
+  fi
+
+  echo "Tip: search -p $q  (raw output)"
+}
+
+cmd_supdate() {
+  echo "Updating..."
+  local pm; pm="$(detect_pm)"
+  if [[ -n "$pm" ]]; then
+    case "$pm" in
+      apt)
+        if has apt-get; then sudo apt-get update -y && sudo apt-get upgrade -y
+        else sudo apt update -y && sudo apt upgrade -y; fi
+        ;;
+      dnf) sudo dnf upgrade -y ;;
+      pacman) sudo pacman -Syu --noconfirm ;;
+      zypper) sudo zypper refresh && sudo zypper update -y ;;
+    esac
+  else
+    echo "No system package manager detected."
+  fi
+  has flatpak && flatpak update -y || true
+  has snap && sudo snap refresh || true
+  echo "done"
+}
+
+cmd_list() {
+  if is_pro "${1:-}"; then
+    echo "=== flatpak ==="
+    (has flatpak && flatpak_list_apps | head -n 300) || echo "(flatpak not installed)"
+    echo
+    echo "=== snap ==="
+    (has snap && snap_list_apps | head -n 300) || echo "(snap not installed)"
+    return 0
+  fi
+
+  echo "Installed apps (simple):"
+  echo
+  if has flatpak; then echo "- Flatpak:"; flatpak list --app --columns=name 2>/dev/null | head -n 80 || true; echo; fi
+  if has snap; then echo "- Snap:"; snap list 2>/dev/null | awk 'NR>1{print $1}' | head -n 80 || true; echo; fi
+  echo "Tip: list -p  (more detail)"
+}
+
+cmd_run() {
+  need_arg "${1:-}"
+  local name="$1"
+
+  # Try flatpak installed id
+  if has flatpak; then
+    local fid=""; fid="$(flatpak_find_installed_id "$name" || true)"
+    if [[ -n "$fid" ]]; then flatpak run "$fid"; return 0; fi
+  fi
+
+  # Try snap installed name
+  if has snap; then
+    local sn=""; sn="$(snap_find_installed_name "$name" || true)"
+    if [[ -n "$sn" ]]; then snap run "$sn"; return 0; fi
+  fi
+
+  # Try native command
+  if has "$name"; then "$name" & disown || true; return 0; fi
+
+  # Try desktop launcher
+  if has gtk-launch; then
+    local desktop_id=""
+    desktop_id="$(
+      grep -Ril --include="*.desktop" "$name" /usr/share/applications ~/.local/share/applications 2>/dev/null \
+        | head -n 1 \
+        | xargs -r basename \
+        | sed 's/\.desktop$//' \
+        || true
+    )"
+    if [[ -n "$desktop_id" ]]; then gtk-launch "$desktop_id" & disown || true; return 0; fi
+  fi
+
+  die "could not run '$name'"
+}
+
+# ---------- Dispatch ----------
+case "$CMD" in
+  ainstall)  cmd_ainstall "${1:-}" ;;
+  finstall)  cmd_finstall "${1:-}" ;;
+  sinstall)  cmd_sinstall "${1:-}" ;;
+  term)      cmd_term "${1:-}" ;;
+  fterm)     cmd_fterm "${1:-}" ;;
+  sterm)     cmd_sterm "${1:-}" ;;
+  search)    cmd_search "$@" ;;
+  supdate)   cmd_supdate "${1:-}" ;;
+  list)      cmd_list "${1:-}" ;;
+  run)       cmd_run "${1:-}" ;;
+  start)     cmd_run "${1:-}" ;;
+  helptiny)  cmd_helptiny ;;
+  mantiny)   cmd_mantiny "${1:-}" ;;
+  *)         cmd_helptiny; die "unknown command: $CMD" ;;
+esac
