@@ -1,298 +1,296 @@
 <p align="center">
-  <img src="assets/atiny-logo.png" alt="ATiny Logo" width="500"/>
+  <img src="assets/TinyLogo.png" alt="TinyPM Logo" width="500"/>
 </p>
 
-<h1 align="center">ATiny</h1>
+<h1 align="center">TinyPM</h1>
 
 <p align="center">
-  A beginner-friendly Linux package wrapper for Windows users.<br>
-  Part of the Abora ecosystem. Licensed under GPLv3.
+  A tiny terminal-first package manager frontend for Linux.<br>
+  Works with Flatpak, Snap, and APT. Licensed under GPLv3.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg"/>
-  <img src="https://img.shields.io/badge/license-GPLv3-blue.svg"/>
-  <img src="https://img.shields.io/badge/platform-Linux-success.svg"/>
+  <img src="https://img.shields.io/badge/version-1.7.0-blue.svg" alt="Version 1.7.0"/>
+  <img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="GPLv3"/>
+  <img src="https://img.shields.io/badge/platform-Linux-success.svg" alt="Linux"/>
 </p>
 
 ---
 
-# What is ATiny?
+## What Is TinyPM?
 
-ATiny is a simple command wrapper that unifies Linux package management.
+TinyPM is a small package manager frontend that gives you one command style across multiple Linux package sources.
 
-Instead of remembering:
+Instead of jumping between different tools, TinyPM lets you use one interface for:
 
-- `apt`
-- `dnf`
-- `pacman`
-- `zypper`
-- `flatpak`
-- `snap`
+- Flatpak
+- Snap
+- APT
 
-You use short, consistent commands everywhere.
+It is designed to stay simple:
 
-ATiny automatically detects your system and chooses the correct backend.
-
-It is designed for:
-
-- 🟢 Windows users moving to Linux
-- 🟢 Beginners who want simple commands
-- 🟢 Advanced users who still want full control
+- beginner-friendly commands
+- terminal-first workflow
+- modular shell scripts that distro maintainers can remix
+- direct access to the real backend when you want it
 
 ---
 
-# Philosophy
+## What TinyPM Does
 
-Linux package managers are powerful — but confusing.
+TinyPM can:
 
-Search results often include:
+- install packages
+- search packages
+- remove packages
+- list installed packages
+- run installed apps
+- track packages installed through TinyPM
+- show installed desktop apps
+- browse a small built-in discover catalog
+- report system and backend status with `doctor` and `version`
 
-- Libraries
-- Shared files
-- Development packages
-- Tools
-- Multiple versions
-- Soundfonts
-- Helper packages
+TinyPM is not a full app store database.
 
-ATiny filters that noise by default.
-
-You see clear, human-friendly results first.
-
-If you want raw output, add:
-
-
--p
-
-
-ATiny works for beginners and pros.
+`discover` is a small built-in starter catalog, not every app available from Flatpak, Snap, or APT.
 
 ---
 
-# Installation
+## Features
+
+- One main CLI: `tinypm`
+- Shortcut commands: `ainstall`, `search`, `term`, `start`, `supdate`
+- Terminal app launcher: `tinypm-app`
+- Host-aware execution for sandboxed environments
+- Managed package tracking
+- Modular internals under `lib/` for easy downstream remixes
+
+---
+
+## Installation
 
 Clone the repository:
 
-
-git clone https://github.com/YOURNAME/ATiny.git
-
+```bash
+git clone https://github.com/AnimatedGTVR/ATiny.git
 cd ATiny
+```
 
+Make the scripts executable if needed:
 
-Make installer executable:
+```bash
+chmod +x atiny tinypm-app version _spinner
+```
 
-
-chmod +x install.sh
-
-
-Run installer:
-
-
-./install.sh
-
-
-Restart your terminal, then test:
-
-
-helptiny
-atiny --version
-
-
----
-
-# Commands
-
-## Install
-
-
-ainstall <name>
-
-
-Automatically tries:
-
-1. System package manager
-2. Flatpak
-3. Snap
+Add the install directory to your `PATH` or symlink the commands into `~/.local/bin`.
 
 Example:
 
+```bash
+mkdir -p ~/.local/bin
+ln -sf "$PWD/atiny" ~/.local/bin/tinypm
+ln -sf "$PWD/atiny" ~/.local/bin/ainstall
+ln -sf "$PWD/atiny" ~/.local/bin/search
+ln -sf "$PWD/atiny" ~/.local/bin/term
+ln -sf "$PWD/atiny" ~/.local/bin/start
+ln -sf "$PWD/atiny" ~/.local/bin/supdate
+ln -sf "$PWD/tinypm-app" ~/.local/bin/tinypm-app
+```
 
-ainstall musescore
+Then test it:
 
-
----
-
-## Remove
-
-
-term <name>
-
-
-Removes whatever is installed.
-
-Flatpak only:
-
-
-fterm <name>
-
-
-Snap only:
-
-
-sterm <name>
-
+```bash
+tinypm help
+tinypm doctor
+version
+```
 
 ---
 
-## Search
+## Commands
 
-Human-friendly mode (default):
+### Install
 
+```bash
+tinypm install [-f|-s|-n] <package>
+ainstall [-f|-s|-n] <package>
+```
 
-search <query>
+Examples:
 
+```bash
+ainstall -f org.gimp.GIMP
+ainstall -s firefox
+ainstall -n vlc
+```
 
-Shows:
+### Search
 
-- Top picks
-- Recommended install command
-- Filters confusing helper packages
+```bash
+tinypm search [-f|-s|-n] <query>
+search [-f|-s|-n] <query>
+```
 
-Pro mode:
+Examples:
 
+```bash
+search -f musescore
+search -s firefox
+search -n libreoffice
+```
 
-search -p <query>
+### Remove
 
+```bash
+tinypm remove [-f|-s|-n] <package>
+term [-f|-s|-n] <package>
+```
 
-Shows full raw output from system, flatpak, and snap.
+### List Installed Packages
 
----
+```bash
+tinypm list [-f|-s|-n]
+```
 
-## Update Everything
+Examples:
 
+```bash
+tinypm list -f
+tinypm list -s
+tinypm list -n
+```
 
-supdate
+### Run an App
 
+```bash
+tinypm start [-f|-s] <app>
+tinypm run [-f|-s] <app>
+start [-f|-s] <app>
+```
 
-Pro mode:
+Examples:
 
+```bash
+start org.gimp.GIMP -f
+start firefox -s
+start musescore
+```
 
-supdate -p
+### Update
 
+```bash
+tinypm update [-f|-s|-n]
+supdate [-f|-s|-n]
+```
 
----
+### TinyPM Package Tracking
 
-## List Installed Apps
+```bash
+tinypm managed
+tinypm info <package>
+```
 
-Simple:
+### Desktop Apps and Discover
 
-
-list
-
-
-Pro:
-
-
-list -p
-
-
----
-
-## Run an Application
-
-
-run <name>
-
-
-or
-
-
-start <name>
-
-
-ATiny will try:
-
-1. Flatpak
-2. Snap
-3. Native binary
-4. Desktop launcher
-
----
-
-## Help
-
-
-helptiny
-mantiny <command>
-
-
----
-
-# Supported Systems
-
-ATiny automatically supports:
-
-- Debian / Ubuntu / Kubuntu (apt)
-- Fedora (dnf)
-- Arch Linux (pacman)
-- openSUSE (zypper)
-
-If Flatpak or Snap are installed, ATiny integrates with them automatically.
+```bash
+tinypm apps
+tinypm discover [query]
+tinypm app
+tinypm-app
+```
 
 ---
 
-# License
+## Flags
 
-ATiny is licensed under the **GNU General Public License v3.0 (GPL-3.0-only)**.
+- `-f`, `--flat`, `--flatpak`: use Flatpak
+- `-s`, `--snp`, `--snap`: use Snap
+- `-n`, `--nat`, `--native`: use APT
 
-You are free to:
-
-- Use
-- Modify
-- Distribute
-
-Any distributed modifications must remain GPLv3.
-
-See the `LICENSE` file for full text.
+If you do not pass a backend flag, TinyPM uses its default selection logic.
 
 ---
 
-# Roadmap
+## Terminal App
 
-Planned improvements:
+TinyPM includes a terminal app with a simple home screen for:
 
-- Better version detection during install
-- Automatic smart version preference (e.g., musescore4 > musescore3)
-- Optional minimal UI wrapper
-- Abora integration layer
-- Better Windows-style error messages
+- viewing your desktop apps
+- browsing the built-in discover catalog
+- searching package sources
+- installing and removing packages
+- running apps
+- checking doctor info
 
----
+Launch it with:
 
-# Contributing
+```bash
+tinypm-app
+```
 
-Pull requests are welcome.
+or:
 
-Please keep changes:
-
-- Beginner-safe by default
-- Cross-distro compatible
-- Clean and readable
-- GNU-aligned
-
----
-
-# Vision
-
-ATiny is not a replacement for your system package manager.
-
-It is a translator.
-
-A bridge.
-
-A tiny layer that makes Linux simpler — without removing its power.
+```bash
+tinypm app
+```
 
 ---
 
-ATiny v1.0.0
+## Architecture
+
+TinyPM is intentionally modular.
+
+- `atiny`: main entrypoint
+- `lib/core/`: parsing, app flow, actions, state, UI, doctor output
+- `lib/providers/`: backend-specific provider logic
+- `share/`: catalog and logo assets
+
+This makes it easier for distro maintainers and downstream forks to keep the same interface while replacing internals.
+
+---
+
+## Supported Backends
+
+TinyPM currently supports:
+
+- Flatpak
+- Snap
+- APT
+
+The current implementation is aimed at Linux systems where those tools are available.
+
+---
+
+## License
+
+TinyPM is licensed under the **GNU General Public License v3.0**.
+
+See [LICENSE](LICENSE) for the full text.
+
+---
+
+## Project Status
+
+TinyPM is currently a working terminal-first package manager frontend with:
+
+- real Flatpak support
+- real Snap support
+- real APT support
+- managed package tracking
+- terminal app flow
+- fastfetch-style `version` output
+
+---
+
+## Vision
+
+TinyPM is not trying to replace Flatpak, Snap, or APT.
+
+It is a tiny layer over them:
+
+- one interface
+- small scripts
+- easy to remix
+- easy to understand
+
+TinyPM keeps the real Linux tools underneath, while giving people a simpler way to use them.
