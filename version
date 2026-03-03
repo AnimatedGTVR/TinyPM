@@ -57,7 +57,7 @@ fi
 cat "$script_dir/share/logo.txt"
 printf '\n'
 
-printf 'TinyPM v1.8.0\n'
+printf 'TinyPM v2.0.0-alpha-untested.1\n'
 printf '%s\n' '------------------------------------------------------------'
 printf '  %-16s %s\n' 'Host' "$host_name"
 printf '  %-16s %s\n' 'OS' "$os_name"

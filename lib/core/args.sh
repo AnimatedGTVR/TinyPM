@@ -44,7 +44,7 @@ parse_action_args() {
 }
 
 init_cli_context() {
-    if [[ "$prog_name" == "atiny" || "$prog_name" == "tinypm" ]]; then
+    if [[ "$prog_name" == "tiny" || "$prog_name" == "tinypm" ]]; then
         action="${1:-help}"
         shift || true
         parse_action_args "auto" "$@"

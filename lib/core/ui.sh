@@ -2,7 +2,7 @@
 
 usage() {
     cat <<'EOF2'
-TinyPM v1.8.0: a tiny package manager for native Linux PMs, Flatpak, Snap, and Seed
+TinyPM v2.0.0-alpha-untested.1: a tiny package manager for native Linux PMs, Flatpak, Snap, and Seed
 
 Usage:
   tinypm install [-f|-s|-n|--seed] <package>
@@ -20,6 +20,9 @@ Usage:
   tinypm version
   tinypm app
   tinypm-app
+  tiny --version
+  syspm update
+  seed [store|search|install|remove|list|run|update|about]
 
 Shortcuts:
   ainstall [-f|-s|-n|--seed] <package>
@@ -38,8 +41,10 @@ Native PMs:
   TinyPM can detect apt, dnf, pacman, xbps, zypper, apk, and emerge.
 
 Notes:
-  `discover` is a starter catalog, not every package available everywhere.
+  `discover` and `seed store` are curated catalogs, not every package available everywhere.
   If no native package manager is detected, TinyPM can fall back to Seed.
+  `syspm` routes TinyPM through the native system package manager.
+  `seed update` refreshes TinyPM from GitHub and then refreshes installed Seed packages.
 EOF2
 }
 
@@ -52,17 +57,9 @@ run_with_spinner() {
         shift
 
         export use_host_backend
-        export -f die
-        export -f has_cmd
-        export -f backend_run
-        export -f backend_exec
-        export -f host_run
-        export -f host_has_cmd
-        export -f backend_has_cmd
-        export -f graphical_session_available
-        export -f backend_run_root
-        export -f backend_auth_mode
-        export -f "$func_name"
+        while read -r _ _ exported_func; do
+            export -f "$exported_func"
+        done < <(declare -F)
 
         "$spinner" "$message" -- bash -lc 'func_name="$1"; shift; "$func_name" "$@"' bash "$func_name" "$@"
         return

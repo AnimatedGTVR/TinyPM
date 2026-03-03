@@ -13,4 +13,4 @@ while [[ -L "$script_path" ]]; do
 done
 
 script_dir="$(cd -P "$(dirname "$script_path")" && pwd)"
-exec "$script_dir/atiny" app "$@"
+exec "$script_dir/tinypm" app "$@"

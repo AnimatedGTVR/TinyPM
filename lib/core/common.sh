@@ -47,7 +47,9 @@ host_has_cmd() {
     local cmd="$1"
 
     if [[ "$use_host_backend" -eq 1 ]]; then
-        flatpak-spawn --host sh -lc 'command -v "$1" >/dev/null 2>&1' sh "$cmd" 2>/dev/null
+        local escaped_cmd
+        printf -v escaped_cmd '%q' "$cmd"
+        flatpak-spawn --host sh -lc "command -v $escaped_cmd >/dev/null 2>&1" 2>/dev/null
         return
     fi
 
@@ -126,7 +128,9 @@ backend_has_cmd() {
     local cmd="$1"
 
     if [[ "$use_host_backend" -eq 1 ]]; then
-        flatpak-spawn --host sh -lc 'command -v "$1" >/dev/null 2>&1' sh "$cmd" 2>/dev/null
+        local escaped_cmd
+        printf -v escaped_cmd '%q' "$cmd"
+        flatpak-spawn --host sh -lc "command -v $escaped_cmd >/dev/null 2>&1" 2>/dev/null
         return
     fi
 

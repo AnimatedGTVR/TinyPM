@@ -1,0 +1,333 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="${BASH_SOURCE[0]}"
+while [[ -L "$script_path" ]]; do
+    script_parent="$(cd -P "$(dirname "$script_path")" && pwd)"
+    script_target="$(readlink "$script_path")"
+    if [[ "$script_target" == /* ]]; then
+        script_path="$script_target"
+    else
+        script_path="$script_parent/$script_target"
+    fi
+done
+
+script_dir="$(cd -P "$(dirname "$script_path")" && pwd)"
+tinypm_cmd="$script_dir/tinypm"
+[[ -x "$tinypm_cmd" ]] || tinypm_cmd="$script_dir/bin/tinypm"
+seed_catalog="$script_dir/share/seed.tsv"
+[[ -r "$seed_catalog" ]] || seed_catalog="$script_dir/bin/share/seed.tsv"
+tinypm_catalog="$script_dir/share/catalog.tsv"
+[[ -r "$tinypm_catalog" ]] || tinypm_catalog="$script_dir/bin/share/catalog.tsv"
+seed_logo="$script_dir/share/seed-logo.txt"
+[[ -r "$seed_logo" ]] || seed_logo="$script_dir/bin/share/seed-logo.txt"
+default_repo_url="https://github.com/AnimatedGTVR/TinyPM.git"
+default_prefix="${TINYPM_PREFIX:-$HOME/.tinypm}"
+
+usage() {
+    cat <<'EOH'
+Seed: TinyPM's built-in mini package manager
+
+Usage:
+  seed
+  seed store [query]
+  seed search [query]
+  seed install <package>
+  seed remove <package>
+  seed list
+  seed run <package>
+  seed update
+  seed about
+  seed info
+  seed help
+EOH
+}
+
+print_about() {
+    if [[ -r "$seed_logo" ]]; then
+        cat "$seed_logo"
+        printf '\n'
+    fi
+
+    cat <<'EOA'
+Seed
+----
+TinyPM's built-in mini package manager and storefront.
+
+Purpose:
+- fallback when no native package manager is available
+- simple portable package delivery
+- a bigger built-in store through `seed store`
+- self-update path through `seed update`
+
+Commands:
+- `seed store`
+- `seed search <query>`
+- `seed install <package>`
+- `seed list`
+- `seed run <package>`
+- `seed update`
+EOA
+}
+
+print_store() {
+    local query="${1:-}"
+
+    [[ -r "$tinypm_catalog" ]] || {
+        echo 'Seed catalog is unavailable.' >&2
+        exit 1
+    }
+
+    printf "%-22s %-14s %-8s %-32s %s\n" "NAME" "CATEGORY" "SOURCE" "PACKAGE" "DESCRIPTION"
+    if [[ -z "$query" ]]; then
+        awk -F '\t' '{ printf "%-22s %-14s %-8s %-32s %s\n", $1, $2, $3, $4, $5 }' "$tinypm_catalog"
+        return
+    fi
+
+    awk -F '\t' -v q="$query" '
+        BEGIN { q=tolower(q) }
+        {
+            line=tolower($0)
+            if (index(line, q) > 0) {
+                printf "%-22s %-14s %-8s %-32s %s\n", $1, $2, $3, $4, $5
+            }
+        }' "$tinypm_catalog"
+}
+
+resolve_catalog_install() {
+    local query="$1"
+
+    awk -F '\t' -v q="$query" '
+        BEGIN { q=tolower(q) }
+        function rank(source) {
+            if (source == "seed") return 1
+            if (source == "flatpak") return 2
+            if (source == "snap") return 3
+            if (source == "apt") return 4
+            return 9
+        }
+        {
+            name=tolower($1)
+            pkg=tolower($4)
+            if (name == q || pkg == q) {
+                if (!found || rank($3) < best) {
+                    row=$0
+                    best=rank($3)
+                    found=1
+                }
+            }
+        }
+        END {
+            if (found) print row
+            else exit 1
+        }' "$tinypm_catalog"
+}
+
+install_from_catalog() {
+    local query="$1"
+    local row name category source package description
+
+    row="$(resolve_catalog_install "$query")" || {
+        echo "Seed could not find an install target for: $query" >&2
+        exit 1
+    }
+
+    IFS=$'\t' read -r name category source package description <<EOF_ROW
+$row
+EOF_ROW
+
+    case "$source" in
+        seed) exec "$tinypm_cmd" install --seed "$package" ;;
+        flatpak) exec "$tinypm_cmd" install -f "$package" ;;
+        snap) exec "$tinypm_cmd" install -s "$package" ;;
+        apt) exec "$tinypm_cmd" install -n "$package" ;;
+        *) echo "Unsupported catalog source: $source" >&2; exit 1 ;;
+    esac
+}
+
+find_repo_root() {
+    local candidate
+    for candidate in "$script_dir" "$script_dir/.." "$default_prefix/repo"; do
+        candidate="$(cd -P "$candidate" 2>/dev/null && pwd || true)"
+        [[ -n "$candidate" && -d "$candidate/.git" ]] && {
+            printf '%s\n' "$candidate"
+            return 0
+        }
+    done
+    return 1
+}
+
+resolve_repo_file() {
+    local repo_root="$1"
+    local target_name="$2"
+    local candidate
+
+    case "$target_name" in
+        tinypm)
+            for candidate in                 "$repo_root/$target_name"                 "$repo_root/bin/$target_name"                 "$repo_root/atiny"                 "$repo_root/bin/atiny"
+            do
+                [[ -e "$candidate" ]] && {
+                    printf '%s
+' "$candidate"
+                    return 0
+                }
+            done
+            ;;
+        _spinner|tinypm-app|version|tinypm.desktop)
+            for candidate in                 "$repo_root/$target_name"                 "$repo_root/bin/$target_name"
+            do
+                [[ -e "$candidate" ]] && {
+                    printf '%s
+' "$candidate"
+                    return 0
+                }
+            done
+            ;;
+        seed)
+            for candidate in                 "$repo_root/$target_name"                 "$repo_root/bin/$target_name"
+            do
+                [[ -e "$candidate" ]] && {
+                    printf '%s
+' "$candidate"
+                    return 0
+                }
+            done
+            return 1
+            ;;
+        *)
+            [[ -e "$repo_root/$target_name" ]] && {
+                printf '%s
+' "$repo_root/$target_name"
+                return 0
+            }
+            return 1
+            ;;
+    esac
+
+    return 1
+}
+
+sync_runtime_from_repo() {
+    local repo_root="$1"
+    local prefix_root="$default_prefix"
+    local bin_dir="$prefix_root/bin"
+    local desktop_dir="$HOME/.local/share/applications"
+    local local_bin="$HOME/.local/bin"
+    local cmd
+
+    mkdir -p "$bin_dir" "$desktop_dir" "$local_bin"
+    rm -rf "$bin_dir/lib" "$bin_dir/share" "$bin_dir/assets"
+
+    cp -R "$repo_root/lib" "$bin_dir/"
+    cp -R "$repo_root/share" "$bin_dir/"
+    cp -R "$repo_root/assets" "$bin_dir/"
+    cp -f "$(resolve_repo_file "$repo_root" _spinner)" "$bin_dir/_spinner"
+    cp -f "$(resolve_repo_file "$repo_root" tinypm)" "$bin_dir/tinypm"
+    cp -f "$(resolve_repo_file "$repo_root" tinypm-app)" "$bin_dir/tinypm-app"
+    if seed_source="$(resolve_repo_file "$repo_root" seed 2>/dev/null)"; then
+        cp -f "$seed_source" "$bin_dir/seed"
+    fi
+    cp -f "$(resolve_repo_file "$repo_root" version)" "$bin_dir/version"
+    cp -f "$(resolve_repo_file "$repo_root" tinypm.desktop)" "$bin_dir/tinypm.desktop"
+    if [[ -f "$repo_root/syspm.sh" ]]; then
+        cp -f "$repo_root/syspm.sh" "$bin_dir/syspm"
+    fi
+    cp -f "$repo_root/scripts/install.sh" "$prefix_root/install.sh"
+    cp -f "$repo_root/scripts/uninstall.sh" "$prefix_root/uninstall.sh"
+
+    chmod +x "$bin_dir/_spinner" "$bin_dir/tinypm" "$bin_dir/tinypm-app" "$bin_dir/seed" "$bin_dir/version" "$prefix_root/install.sh" "$prefix_root/uninstall.sh"
+    [[ -f "$bin_dir/syspm" ]] && chmod +x "$bin_dir/syspm"
+
+    ln -sfn "$bin_dir/tinypm" "$bin_dir/tiny"
+    for cmd in ainstall search term start supdate; do
+        ln -sfn "$bin_dir/tinypm" "$bin_dir/$cmd"
+        ln -sfn "$bin_dir/tinypm" "$local_bin/$cmd"
+    done
+
+    ln -sfn "$bin_dir/tinypm" "$local_bin/tinypm"
+    ln -sfn "$bin_dir/tinypm" "$local_bin/tiny"
+    ln -sfn "$bin_dir/tinypm-app" "$local_bin/tinypm-app"
+    ln -sfn "$bin_dir/seed" "$local_bin/seed"
+    ln -sfn "$bin_dir/version" "$local_bin/version"
+    ln -sfn "$bin_dir/_spinner" "$local_bin/_spinner"
+    [[ -f "$bin_dir/syspm" ]] && ln -sfn "$bin_dir/syspm" "$local_bin/syspm"
+
+    sed "s#^Exec=.*#Exec=tinypm-app#" "$repo_root/tinypm.desktop" >"$desktop_dir/tinypm.desktop"
+}
+
+update_from_github() {
+    local repo_root repo_url clone_dir
+
+    command -v git >/dev/null 2>&1 || {
+        echo 'seed update requires git.' >&2
+        exit 1
+    }
+
+    if repo_root="$(find_repo_root)"; then
+        repo_url="$(git -C "$repo_root" remote get-url origin 2>/dev/null || printf '%s' "$default_repo_url")"
+        printf '[Seed] Updating TinyPM from %s\n' "$repo_url"
+        git -C "$repo_root" pull --rebase --autostash origin main
+    else
+        repo_root="$default_prefix/repo"
+        repo_url="$default_repo_url"
+        mkdir -p "$default_prefix"
+        if [[ -d "$repo_root/.git" ]]; then
+            printf '[Seed] Updating TinyPM mirror from %s\n' "$repo_url"
+            git -C "$repo_root" pull --rebase --autostash origin main
+        else
+            printf '[Seed] Cloning TinyPM from %s\n' "$repo_url"
+            rm -rf "$repo_root"
+            git clone "$repo_url" "$repo_root"
+        fi
+    fi
+
+    sync_runtime_from_repo "$repo_root"
+    if [[ -x "$default_prefix/bin/tinypm" ]]; then
+        "$default_prefix/bin/tinypm" update --seed || true
+    fi
+    printf '[Seed] TinyPM and Seed are up to date.\n'
+}
+
+case "${1:-store}" in
+    about|info)
+        print_about
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    store)
+        shift || true
+        print_store "${1:-}"
+        ;;
+    search)
+        shift || true
+        print_store "${1:-}"
+        ;;
+    install)
+        shift || true
+        [[ -n "${1:-}" ]] || { echo 'seed install requires a package name' >&2; exit 1; }
+        install_from_catalog "$1"
+        ;;
+    remove|uninstall)
+        shift || true
+        exec "$tinypm_cmd" remove --seed "$@"
+        ;;
+    list)
+        shift || true
+        exec "$tinypm_cmd" list --seed "$@"
+        ;;
+    run|start)
+        shift || true
+        exec "$tinypm_cmd" run --seed "$@"
+        ;;
+    update)
+        shift || true
+        update_from_github "$@"
+        ;;
+    "")
+        print_store
+        ;;
+    *)
+        print_store "$1"
+        ;;
+esac

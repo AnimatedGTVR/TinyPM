@@ -6,11 +6,11 @@
 
 <p align="center">
   A tiny terminal-first package manager frontend for Linux.<br>
-  Works with Flatpak, Snap, and APT. Licensed under GPLv3.
+  Works with native package managers, Flatpak, Snap, and Seed. Licensed under GPLv3.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.0-blue.svg" alt="Version 1.7.0"/>
+  <img src="https://img.shields.io/badge/version-2.0.0--alpha--untested.1-blue.svg" alt="Version 2.0.0 alpha untested 1"/>
   <img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="GPLv3"/>
   <img src="https://img.shields.io/badge/platform-Linux-success.svg" alt="Linux"/>
 </p>
@@ -21,49 +21,61 @@
 
 TinyPM is a small package manager frontend that gives you one command style across multiple Linux package sources.
 
-Instead of jumping between different tools, TinyPM lets you use one interface for:
+TinyPM currently supports:
 
-- Flatpak
-- Snap
-- APT
+- native package managers through `-n`
+- Flatpak through `-f`
+- Snap through `-s`
+- Seed through `--seed`
 
-It is designed to stay simple:
+TinyPM detects and uses these native package managers:
 
-- beginner-friendly commands
-- terminal-first workflow
-- modular shell scripts that distro maintainers can remix
-- direct access to the real backend when you want it
+- `apt`
+- `dnf`
+- `pacman`
+- `xbps`
+- `zypper`
+- `apk`
+- `emerge`
+
+If none of those are available, TinyPM can fall back to Seed.
 
 ---
 
-## What TinyPM Does
+## What Is Seed?
 
-TinyPM can:
+Seed is TinyPM's built-in mini package manager and store.
 
-- install packages
-- search packages
-- remove packages
-- list installed packages
-- run installed apps
-- track packages installed through TinyPM
-- show installed desktop apps
-- browse a small built-in discover catalog
-- report system and backend status with `doctor` and `version`
+It serves two roles:
 
-TinyPM is not a full app store database.
+- portable package recipes for direct Seed installs
+- a simple storefront over TinyPM's larger built-in catalog
 
-`discover` is a small built-in starter catalog, not every app available from Flatpak, Snap, or APT.
+Useful Seed commands:
+
+```bash
+seed store
+seed search blender
+seed install blender
+seed install yq
+seed about
+seed update
+```
+
+`seed update` pulls the latest TinyPM repo from GitHub and refreshes the installed runtime.
 
 ---
 
 ## Features
 
-- One main CLI: `tinypm`
+- Main commands: `tinypm` and `tiny`
+- Native shortcut: `syspm`
 - Shortcut commands: `ainstall`, `search`, `term`, `start`, `supdate`
+- Seed storefront command: `seed`
 - Terminal app launcher: `tinypm-app`
-- Host-aware execution for sandboxed environments
+- Interactive installer menu
 - Managed package tracking
-- Modular internals under `lib/` for easy downstream remixes
+- Modular internals under `lib/`
 
 ---
 
@@ -72,225 +84,124 @@ TinyPM is not a full app store database.
 Clone the repository:
 
 ```bash
-git clone https://github.com/AnimatedGTVR/ATiny.git
-cd ATiny
+git clone https://github.com/AnimatedGTVR/TinyPM.git
+cd TinyPM
 ```
 
-Make the scripts executable if needed:
+Run the installer:
 
 ```bash
-chmod +x atiny tinypm-app version _spinner
+chmod +x install.sh
+./install.sh
 ```
 
-Add the install directory to your `PATH` or symlink the commands into `~/.local/bin`.
+The installer will:
 
-Example:
-
-```bash
-mkdir -p ~/.local/bin
-ln -sf "$PWD/atiny" ~/.local/bin/tinypm
-ln -sf "$PWD/atiny" ~/.local/bin/ainstall
-ln -sf "$PWD/atiny" ~/.local/bin/search
-ln -sf "$PWD/atiny" ~/.local/bin/term
-ln -sf "$PWD/atiny" ~/.local/bin/start
-ln -sf "$PWD/atiny" ~/.local/bin/supdate
-ln -sf "$PWD/tinypm-app" ~/.local/bin/tinypm-app
-```
+- show the TinyPM logo
+- detect your native package manager
+- let you choose `apt`, `xbps`, `pacman`, `dnf`, `zypper`, `apk`, `emerge`, or `seed`
+- install TinyPM into `~/.tinypm`
+- create command links in `~/.local/bin`
+- add `syspm` for native package-manager actions
 
 Then test it:
 
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
+hash -r
 tinypm help
 tinypm doctor
-version
+tiny --version
+syspm update
+seed store
 ```
 
 ---
 
 ## Commands
 
-### Install
+### Main
 
 ```bash
-tinypm install [-f|-s|-n] <package>
-ainstall [-f|-s|-n] <package>
+tinypm install [-f|-s|-n|--seed] <package>
+tinypm search [-f|-s|-n|--seed] <query>
+tinypm remove [-f|-s|-n|--seed] <package>
+tinypm list [-f|-s|-n|--seed]
+tinypm start [-f|-s|--seed] <app>
+tinypm update [-f|-s|-n|--seed]
+tinypm doctor
+tinypm version
+```
+
+### Shortcuts
+
+```bash
+ainstall [-f|-s|-n|--seed] <package>
+search [-f|-s|-n|--seed] <query>
+term [-f|-s|-n|--seed] <package>
+start [-f|-s|--seed] <app>
+supdate [-f|-s|-n|--seed]
+tiny --version
+syspm update
+```
+
+### Seed
+
+```bash
+seed store [query]
+seed search [query]
+seed install <package>
+seed remove <package>
+seed list
+seed run <package>
+seed update
+seed about
 ```
 
 Examples:
 
 ```bash
-ainstall -f org.gimp.GIMP
-ainstall -s firefox
-ainstall -n vlc
-```
-
-### Search
-
-```bash
-tinypm search [-f|-s|-n] <query>
-search [-f|-s|-n] <query>
-```
-
-Examples:
-
-```bash
-search -f musescore
-search -s firefox
-search -n libreoffice
-```
-
-### Remove
-
-```bash
-tinypm remove [-f|-s|-n] <package>
-term [-f|-s|-n] <package>
-```
-
-### List Installed Packages
-
-```bash
-tinypm list [-f|-s|-n]
-```
-
-Examples:
-
-```bash
-tinypm list -f
-tinypm list -s
-tinypm list -n
-```
-
-### Run an App
-
-```bash
-tinypm start [-f|-s] <app>
-tinypm run [-f|-s] <app>
-start [-f|-s] <app>
-```
-
-Examples:
-
-```bash
-start org.gimp.GIMP -f
-start firefox -s
-start musescore
-```
-
-### Update
-
-```bash
-tinypm update [-f|-s|-n]
-supdate [-f|-s|-n]
-```
-
-### TinyPM Package Tracking
-
-```bash
-tinypm managed
-tinypm info <package>
-```
-
-### Desktop Apps and Discover
-
-```bash
-tinypm apps
-tinypm discover [query]
-tinypm app
-tinypm-app
+seed store
+seed search blender
+seed install blender
+seed install yq
+tinypm install -f org.blender.Blender
+tinypm install -n htop
+syspm update
 ```
 
 ---
 
-## Flags
+## Store Notes
 
-- `-f`, `--flat`, `--flatpak`: use Flatpak
-- `-s`, `--snp`, `--snap`: use Snap
-- `-n`, `--nat`, `--native`: use APT
+`discover` and `seed store` are curated built-in catalogs.
 
-If you do not pass a backend flag, TinyPM uses its default selection logic.
-
----
-
-## Terminal App
-
-TinyPM includes a terminal app with a simple home screen for:
-
-- viewing your desktop apps
-- browsing the built-in discover catalog
-- searching package sources
-- installing and removing packages
-- running apps
-- checking doctor info
-
-Launch it with:
+They are larger than before, but they are still not every package in every Linux repository. For full provider search, use the real backends through TinyPM:
 
 ```bash
-tinypm-app
-```
-
-or:
-
-```bash
-tinypm app
+tinypm search -n <query>
+tinypm search -f <query>
+tinypm search -s <query>
 ```
 
 ---
 
 ## Architecture
 
-TinyPM is intentionally modular.
+TinyPM is modular by design.
 
-- `atiny`: main entrypoint
-- `lib/core/`: parsing, app flow, actions, state, UI, doctor output
-- `lib/providers/`: backend-specific provider logic
-- `share/`: catalog and logo assets
-
-This makes it easier for distro maintainers and downstream forks to keep the same interface while replacing internals.
-
----
-
-## Supported Backends
-
-TinyPM currently supports:
-
-- Flatpak
-- Snap
-- APT
-
-The current implementation is aimed at Linux systems where those tools are available.
+- `tinypm`: main entrypoint
+- `tiny`: short alias to the same entrypoint
+- `syspm`: native package-manager wrapper
+- `seed`: Seed storefront and wrapper
+- `lib/core/`: parsing, actions, app flow, UI, state, config, doctor output
+- `lib/providers/`: backend logic
+- `share/`: catalog and ASCII/logo assets
 
 ---
 
 ## License
 
-TinyPM is licensed under the **GNU General Public License v3.0**.
+TinyPM is licensed under the GNU General Public License v3.0.
 
 See [LICENSE](LICENSE) for the full text.
-
----
-
-## Project Status
-
-TinyPM is currently a working terminal-first package manager frontend with:
-
-- real Flatpak support
-- real Snap support
-- real APT support
-- managed package tracking
-- terminal app flow
-- fastfetch-style `version` output
-
----
-
-## Vision
-
-TinyPM is not trying to replace Flatpak, Snap, or APT.
-
-It is a tiny layer over them:
-
-- one interface
-- small scripts
-- easy to remix
-- easy to understand
-
-TinyPM keeps the real Linux tools underneath, while giving people a simpler way to use them.

@@ -41,7 +41,8 @@ terminal_app_ui() {
             "$(installed_app_count 2>/dev/null || echo 0)" \
             "$(tracked_package_count 2>/dev/null || echo 0)" \
             "$(catalog_count 2>/dev/null || echo 0)"
-        printf 'Discover is a starter catalog. Seed is TinyPM\''s built-in mini package manager.\n'
+        printf 'Discover and Seed Store are curated catalogs. Use syspm update for your native system packages.\n'
+        printf "Seed is TinyPM's built-in mini package manager and can refresh TinyPM with seed update.\n"
         printf '\n'
         printf '1. View my desktop apps\n'
         printf '2. Browse discover catalog\n'
