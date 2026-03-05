@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Setup base tools
-        shell: bash
+        shell: sh
         run: |
           set -e
           ${{ matrix.setup }}

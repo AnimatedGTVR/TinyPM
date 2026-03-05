@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154
 
 doctor_command_path() {
     local name="$1"
@@ -45,7 +46,7 @@ doctor_fix_runtime() {
     fi
 
     if ! grep -q 'HOME/.local/bin' "$shell_rc" 2>/dev/null; then
-        printf '\n# TinyPM\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$shell_rc"
+        printf "\n# TinyPM\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" >> "$shell_rc"
     fi
 
     printf 'Doctor fix applied: launchers and desktop entry refreshed.\n'

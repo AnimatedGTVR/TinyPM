@@ -131,14 +131,14 @@ resolve_catalog_install() {
 
 install_from_catalog() {
     local query="$1"
-    local row name category source package description
+    local row _name _category source package _description
 
     row="$(resolve_catalog_install "$query")" || {
         echo "Seed could not find an install target for: $query" >&2
         exit 1
     }
 
-    IFS=$'\t' read -r name category source package description <<EOF_ROW
+    IFS=$'\t' read -r _name _category source package _description <<EOF_ROW
 $row
 EOF_ROW
 
@@ -293,7 +293,7 @@ rollback_runtime() {
     local archive="${1:-}"
 
     if [[ -z "$archive" ]]; then
-        archive="$(ls -1t "$backup_dir"/tinypm-runtime-*.tar.gz 2>/dev/null | head -n 1 || true)"
+        archive="$(find "$backup_dir" -maxdepth 1 -type f -name 'tinypm-runtime-*.tar.gz' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2- || true)"
     fi
 
     [[ -n "$archive" && -f "$archive" ]] || {
@@ -323,7 +323,7 @@ sync_runtime_from_repo() {
     src_desktop="$(require_repo_file "$repo_root" tinypm.desktop)" || return 1
 
     mkdir -p "$bin_dir" "$desktop_dir" "$local_bin"
-    rm -rf "$bin_dir/lib" "$bin_dir/share" "$bin_dir/assets"
+    rm -rf "${bin_dir:?}/lib" "${bin_dir:?}/share" "${bin_dir:?}/assets"
 
     cp -R "$repo_root/lib" "$bin_dir/" || return 1
     cp -R "$repo_root/share" "$bin_dir/" || return 1

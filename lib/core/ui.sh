@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154
 
 usage() {
     cat <<'EOF2'
@@ -72,9 +73,11 @@ run_with_spinner() {
 
         export use_host_backend
         while read -r _ _ exported_func; do
+            # shellcheck disable=SC2163
             export -f "$exported_func"
         done < <(declare -F)
 
+        # shellcheck disable=SC2016
         "$spinner" "$message" -- bash -lc 'func_name="$1"; shift; "$func_name" "$@"' bash "$func_name" "$@"
         return
     fi

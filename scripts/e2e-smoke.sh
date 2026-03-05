@@ -26,7 +26,7 @@ printf '[e2e] local command smoke...\n'
 "$repo_root/version" >/dev/null
 version_output="$(mktemp)"
 TINYPM_FLAVOR=abora "$repo_root/version" >"$version_output"
-grep -q 'TinyPM Abora Edition' "$version_output"
+grep -q 'TinyPM.2.0.2.Aedition (abora)' "$version_output"
 rm -f "$version_output"
 TINYPM_FLAVOR=abora "$repo_root/seed" store blender | grep -q 'Blender'
 "$repo_root/syspm.sh" help >/dev/null
@@ -60,7 +60,7 @@ mkdir -p "$HOME/.local/bin"
 printf '1\n' | TINYPM_FLAVOR=abora "$repo_root/install.sh" >/dev/null
 installed_version_output="$(mktemp)"
 "$HOME/.local/bin/tiny" --version >"$installed_version_output"
-grep -q 'TinyPM Abora Edition' "$installed_version_output"
+grep -q 'TinyPM.2.0.2.Aedition (abora)' "$installed_version_output"
 rm -f "$installed_version_output"
 "$HOME/.local/bin/seed" store blender | grep -q 'Blender'
 

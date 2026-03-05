@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154
 
 seed_root="${XDG_DATA_HOME:-$HOME/.local/share}/tinypm/seed"
 seed_packages_dir="$seed_root/packages"
@@ -111,10 +112,10 @@ seed_download_to() {
 
 seed_install_recipe() {
     local package="$1"
-    local row name package_type url exec_name description package_dir file_path wrapper_path
+    local row name package_type url exec_name _description package_dir file_path wrapper_path
 
     row="$(seed_package_row "$package")" || return 1
-    IFS=$'\t' read -r name package_type url exec_name description <<EOI
+    IFS=$'\t' read -r name package_type url exec_name _description <<EOI
 $row
 EOI
 
@@ -146,10 +147,10 @@ EOW
 
 seed_install_from_catalog() {
     local query="$1"
-    local row name category source package description
+    local row name _category source package _description
 
     row="$(seed_catalog_row "$query")" || die "seed package not found: $query"
-    IFS=$'\t' read -r name category source package description <<EOR
+    IFS=$'\t' read -r name _category source package _description <<EOR
 $row
 EOR
 
@@ -219,7 +220,7 @@ seed_remove() {
     local package="$1"
 
     [[ -d "$seed_packages_dir/$package" || -x "$seed_bin_dir/$package" ]] || die "seed package is not installed: $package"
-    rm -rf "$seed_packages_dir/$package"
+    rm -rf "${seed_packages_dir:?}/$package"
     rm -f "$seed_bin_dir/$package"
 }
 

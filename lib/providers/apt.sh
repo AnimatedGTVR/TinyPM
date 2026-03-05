@@ -69,6 +69,7 @@ package_in_apt() {
             if backend_has_cmd qlist; then
                 backend_run qlist -I "$resolved" >/dev/null 2>&1
             else
+                # shellcheck disable=SC2016
                 backend_run sh -lc 'ls /var/db/pkg/* 2>/dev/null | grep -F "/$1-" >/dev/null 2>&1' sh "$resolved"
             fi
             ;;

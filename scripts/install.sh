@@ -46,9 +46,7 @@ resolved_desktop_file() {
 load_flavor_metadata() {
     local config_file
 
-    FLAVOR_ID="$DEFAULT_FLAVOR"
     FLAVOR_NAME="TinyPM"
-    FLAVOR_TAGLINE="TinyPM default flavor"
 
     config_file="$(flavor_file flavor.conf || true)"
     [[ -n "$config_file" ]] && . "$config_file"
@@ -261,7 +259,7 @@ ensure_local_bin_on_path() {
     [[ -n "${ZSH_VERSION:-}" ]] && shell_rc="$HOME/.zshrc"
 
     if ! grep -q 'HOME/.local/bin' "$shell_rc" 2>/dev/null; then
-        printf '\n# TinyPM\nexport PATH="$HOME/.local/bin:$PATH"\n' >>"$shell_rc"
+        printf "\n# TinyPM\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" >>"$shell_rc"
     fi
 }
 
@@ -284,11 +282,11 @@ main() {
     printf 'Commands linked into %s\n' "$LOCAL_BIN"
     printf '\nOpen a new terminal or run:\n'
     printf '  hash -r\n'
-    printf '  export PATH="$HOME/.local/bin:$PATH"\n'
+    printf "  export PATH=\"\$HOME/.local/bin:\$PATH\"\n"
     printf '\nThen test:\n'
-    printf '  "$HOME/.tinypm/bin/tinypm" help\n'
-    printf '  "$HOME/.tinypm/bin/tinypm" selftest\n'
-    printf '  "$HOME/.tinypm/bin/tinypm" doctor --fix\n'
+    printf "  \"\$HOME/.tinypm/bin/tinypm\" help\n"
+    printf "  \"\$HOME/.tinypm/bin/tinypm\" selftest\n"
+    printf "  \"\$HOME/.tinypm/bin/tinypm\" doctor --fix\n"
     printf '  syspm update\n'
     printf '  seed store\n'
 }

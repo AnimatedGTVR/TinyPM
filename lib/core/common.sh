@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2154
 
 spinner="$script_dir/_spinner"
 version_cmd="$script_dir/version"
@@ -16,7 +17,9 @@ tinypm_active_flavor() {
 
 tinypm_flavor_file() {
     local relative_path="$1"
-    local candidate="$script_dir/flavors/$(tinypm_active_flavor)/$relative_path"
+    local candidate
+
+    candidate="$script_dir/flavors/$(tinypm_active_flavor)/$relative_path"
 
     [[ -r "$candidate" ]] || return 1
     printf '%s\n' "$candidate"
@@ -169,6 +172,7 @@ backend_has_cmd() {
 
 backend_os_name() {
     if [[ "$use_host_backend" -eq 1 ]]; then
+        # shellcheck disable=SC2016
         flatpak-spawn --host sh -lc '
             if command -v lsb_release >/dev/null 2>&1; then
                 lsb_release -d | cut -f2

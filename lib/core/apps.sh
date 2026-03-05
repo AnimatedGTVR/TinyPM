@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016
 
 catalog_entries() {
     cat "$(tinypm_catalog_file)"

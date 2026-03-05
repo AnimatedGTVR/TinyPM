@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2154
 set -euo pipefail
 
 script_path="${BASH_SOURCE[0]}"
