@@ -30,6 +30,18 @@ de_supported_list() {
     echo "cosmic, gnome, plasma, xfce"
 }
 
+# Map a TinyPM desktop to the name ANIX's `anix set desktop` accepts.
+# Returns non-zero for desktops ANIX has no option for (e.g. cosmic), so those
+# fall back to the printed declarative instructions.
+de_anix_name() {
+    case "$1" in
+        gnome) echo gnome ;;
+        plasma) echo plasma ;;
+        xfce) echo xfce ;;
+        *) return 1 ;;
+    esac
+}
+
 # Returns "<packages>|<display-manager.service>" for a DE on a native PM.
 # An empty service half means the meta target already provides a greeter
 # (or the distro picks one), so we do not force-enable anything.
@@ -176,6 +188,12 @@ install_de() {
     ensure_provider_available "$pm"
 
     if [[ "$pm" == "nix" ]]; then
+        local anix_de
+        if anix_available && anix_de="$(de_anix_name "$de")"; then
+            anix_set_desktop "$anix_de"
+            printf '%s set as the ANIX desktop.\n' "$(de_label "$de")"
+            return
+        fi
         de_nix_instructions "$de"
         return
     fi

@@ -145,6 +145,32 @@ grab-de cosmic
 
 ---
 
+## Abora / ANIX (declarative installs)
+
+Abora manages its system declaratively through **ANIX** (`/etc/nixos/anix.nix`,
+applied with `anix apply`). When the `anix` tool is present, TinyPM stops doing
+imperative `nix-env` installs and instead edits the ANIX config, so `grab`
+changes are declarative and survive system rebuilds:
+
+```bash
+grab firefox       # -> anix package add firefox   ; anix apply
+grab remove htop   # -> anix package remove htop   ; anix apply
+grab-de gnome      # -> anix set desktop gnome      ; anix apply
+```
+
+This only activates when `anix` is installed. On plain NixOS (no ANIX) or any
+other distro, behavior is unchanged.
+
+Environment overrides:
+
+- `TINYPM_NO_ANIX=1` — ignore ANIX and use `nix-env` directly
+- `TINYPM_ANIX_APPLY=0` — update `anix.nix` but skip the rebuild (run `anix apply` yourself)
+
+Desktops ANIX doesn't model (e.g. `cosmic`) fall back to the printed
+`configuration.nix` instructions.
+
+---
+
 ## Why V3
 
 TinyPM V3 is simpler on purpose.
