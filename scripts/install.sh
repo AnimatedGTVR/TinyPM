@@ -209,12 +209,24 @@ write_config() {
     printf 'tinypm_flavor=%s\n' "$selected_flavor" >> "$CONFIG_FILE"
 }
 
-ensure_local_bin_on_path() {
-    local shell_rc="$HOME/.bashrc"
-    [[ -n "${ZSH_VERSION:-}" ]] && shell_rc="$HOME/.zshrc"
+add_path_line() {
+    local shell_rc="$1"
 
     if ! grep -q 'HOME/.local/bin' "$shell_rc" 2>/dev/null; then
         printf "\n# TinyPM\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" >>"$shell_rc"
+    fi
+}
+
+ensure_local_bin_on_path() {
+    # The installer always runs under bash, so keying off ZSH_VERSION never
+    # updates ~/.zshrc -- a zsh user then has the launchers on disk but not on
+    # PATH ("command not found"). Update every shell rc the user actually has.
+    add_path_line "$HOME/.bashrc"
+    if command -v zsh >/dev/null 2>&1 || [[ -e "$HOME/.zshrc" ]]; then
+        add_path_line "$HOME/.zshrc"
+    fi
+    if [[ -e "$HOME/.profile" ]]; then
+        add_path_line "$HOME/.profile"
     fi
 }
 

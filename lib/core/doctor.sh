@@ -14,9 +14,16 @@ doctor_command_path() {
     printf '%s\n' missing
 }
 
+doctor_add_path_line() {
+    local shell_rc="$1"
+
+    if ! grep -q 'HOME/.local/bin' "$shell_rc" 2>/dev/null; then
+        printf "\n# TinyPM\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" >> "$shell_rc"
+    fi
+}
+
 doctor_fix_runtime() {
     local local_bin="$HOME/.local/bin"
-    local shell_rc="$HOME/.bashrc"
 
     mkdir -p "$local_bin"
 
@@ -35,8 +42,14 @@ doctor_fix_runtime() {
         ln -sfn "$script_dir/syspm.sh" "$local_bin/syspm"
     fi
 
-    if ! grep -q 'HOME/.local/bin' "$shell_rc" 2>/dev/null; then
-        printf "\n# TinyPM\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" >> "$shell_rc"
+    # Update every shell rc the user has, not just bash: a zsh user otherwise
+    # never gets ~/.local/bin on PATH and sees "command not found".
+    doctor_add_path_line "$HOME/.bashrc"
+    if command -v zsh >/dev/null 2>&1 || [[ -e "$HOME/.zshrc" ]]; then
+        doctor_add_path_line "$HOME/.zshrc"
+    fi
+    if [[ -e "$HOME/.profile" ]]; then
+        doctor_add_path_line "$HOME/.profile"
     fi
 
     printf 'Doctor fix applied: launchers refreshed.\n'
