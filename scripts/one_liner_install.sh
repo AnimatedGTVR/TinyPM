@@ -12,7 +12,11 @@ fi
 mkdir -p "$PREFIX"
 
 if [[ -d "$REPO_DIR/.git" ]]; then
-    git -C "$REPO_DIR" pull --rebase origin main || true
+    # Force-sync to upstream main. A plain `pull --rebase || true` silently keeps
+    # stale code on divergence, which leaves new launchers (grab-de, grab-add-repo)
+    # missing even after re-running the installer.
+    git -C "$REPO_DIR" fetch origin main
+    git -C "$REPO_DIR" reset --hard origin/main
 else
     git clone https://github.com/AnimatedGTVR/TinyPM.git "$REPO_DIR"
 fi
