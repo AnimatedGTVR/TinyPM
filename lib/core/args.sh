@@ -2,10 +2,12 @@
 # shellcheck disable=SC2034,SC2154
 
 doctor_fix=0
+repo_name=""
 
 dispatch_multicall() {
     case "$prog_name" in
         grab) echo "install auto" ;;
+        grab-add-repo) echo "add-repo auto" ;;
         search) echo "search auto" ;;
         term) echo "remove auto" ;;
         start) echo "run auto" ;;
@@ -20,8 +22,25 @@ parse_action_args() {
 
     provider="$default_provider"
     package=""
+    repo_name=""
 
     case "$action" in
+        add-repo)
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -gt 0 ]] || die "add-repo requires a repository spec"
+            package="$1"
+            shift
+            if [[ $# -gt 0 ]] && ! provider_from_flag "$1" >/dev/null 2>&1; then
+                repo_name="$1"
+                shift
+            fi
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
         doctor)
             while [[ $# -gt 0 ]]; do
                 case "$1" in
@@ -92,6 +111,19 @@ init_cli_context() {
         return
     fi
 
+    if [[ "$prog_name" == "grab-add-repo" ]]; then
+        case "${1:-}" in
+            ""|help|-h|--help) action="help" ;;
+            version|-v|--version) action="version" ;;
+            *) action="add-repo" ;;
+        esac
+        if [[ "$action" != "add-repo" ]]; then
+            shift || true
+        fi
+        parse_action_args "auto" "$@"
+        return
+    fi
+
     if [[ "$prog_name" == "tiny" || "$prog_name" == "tinypm" ]]; then
         action="${1:-help}"
         case "$action" in
@@ -102,6 +134,7 @@ init_cli_context() {
             l|ls) action="list" ;;
             v) action="version" ;;
             st) action="start" ;;
+            addrepo|add-repo) action="add-repo" ;;
         esac
         shift || true
         parse_action_args "auto" "$@"

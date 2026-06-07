@@ -7,6 +7,7 @@ use_host_backend=0
 tinypm_system_name="TinyPM V3"
 tinypm_engine_name="Parcel"
 tinypm_version="3.0.0"
+tinypm_tagline=""
 
 tinypm_active_flavor() {
     local flavor="${TINYPM_FLAVOR:-}"
@@ -16,6 +17,24 @@ tinypm_active_flavor() {
     fi
 
     printf '%s\n' "${flavor:-default}"
+}
+
+tinypm_load_flavor_metadata() {
+    local config_file
+
+    tinypm_system_name="TinyPM V3"
+    tinypm_engine_name="Parcel"
+    tinypm_tagline=""
+
+    config_file="$(tinypm_flavor_file flavor.conf 2>/dev/null || true)"
+    [[ -n "$config_file" ]] || return 0
+
+    # shellcheck disable=SC1090
+    . "$config_file"
+
+    [[ -n "${FLAVOR_NAME:-}" ]] && tinypm_system_name="$FLAVOR_NAME"
+    [[ -n "${FLAVOR_ENGINE_NAME:-}" ]] && tinypm_engine_name="$FLAVOR_ENGINE_NAME"
+    [[ -n "${FLAVOR_TAGLINE:-}" ]] && tinypm_tagline="$FLAVOR_TAGLINE"
 }
 
 tinypm_flavor_file() {
@@ -39,6 +58,8 @@ tinypm_catalog_file() {
 tinypm_version_label() {
     printf '%s\n' "$tinypm_system_name / $tinypm_engine_name v$tinypm_version"
 }
+
+tinypm_load_flavor_metadata
 
 if [[ "${container:-}" == "flatpak" ]] && command -v flatpak-spawn >/dev/null 2>&1; then
     use_host_backend=1
@@ -302,7 +323,7 @@ normalize_provider() {
 
 provider_from_flag() {
     case "${1:-}" in
-        -f|--flat|--flatpak) echo "flatpak" ;;
+        -f|-flat|-flatpak) echo "flatpak" ;;
         -s|--snp|--snap) echo "snap" ;;
         -n|--nat|--native) echo "native" ;;
         f|flat) echo "flatpak" ;;

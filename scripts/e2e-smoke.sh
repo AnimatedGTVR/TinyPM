@@ -7,6 +7,7 @@ printf '[e2e] syntax checks...\n'
 bash -n \
   "$repo_root/Parcel" \
   "$repo_root/grab" \
+  "$repo_root/grab-add-repo" \
   "$repo_root/tinypm" \
   "$repo_root/syspm.sh" \
   "$repo_root/version" \
@@ -22,11 +23,12 @@ printf '[e2e] local command smoke...\n'
 "$repo_root/tinypm" help >/dev/null
 "$repo_root/tinypm" doctor >/dev/null
 "$repo_root/grab" --version >/dev/null
+"$repo_root/grab-add-repo" help >/dev/null
 "$repo_root/tinypm" search yq >/dev/null
 "$repo_root/version" >/dev/null
 version_output="$(mktemp)"
 TINYPM_FLAVOR=abora "$repo_root/version" >"$version_output"
-grep -q 'TinyPM V3 / Parcel v3.0.0' "$version_output"
+grep -q 'Abora TinyPM V3 / Parcel v3.0.0' "$version_output"
 rm -f "$version_output"
 "$repo_root/syspm.sh" help >/dev/null
 
@@ -51,6 +53,7 @@ mkdir -p "$HOME"
 "$HOME/.local/bin/tinypm" help >/dev/null
 "$HOME/.local/bin/tiny" --version >/dev/null
 "$HOME/.local/bin/grab" help >/dev/null
+"$HOME/.local/bin/grab-add-repo" help >/dev/null
 "$HOME/.local/bin/syspm" help >/dev/null
 "$HOME/.local/bin/tinypm" doctor --fix >/dev/null
 
@@ -61,7 +64,7 @@ TINYPM_FLAVOR=abora "$repo_root/install.sh" >/dev/null
 installed_version_output="$(mktemp)"
 "$HOME/.local/bin/Parcel" --version >/dev/null
 "$HOME/.local/bin/tiny" --version >"$installed_version_output"
-grep -q 'TinyPM V3 / Parcel v3.0.0' "$installed_version_output"
+grep -q 'Abora TinyPM V3 / Parcel v3.0.0' "$installed_version_output"
 rm -f "$installed_version_output"
 "$HOME/.local/bin/grab" --version >/dev/null
 

@@ -20,12 +20,16 @@ case "${1:---version}" in
         exec "$script_dir/version" "$@"
         ;;
     help|-h|--help)
-        cat <<'EOF2'
-Parcel is the TinyPM V3 core engine.
+        . "$script_dir/lib/core/config.sh"
+        . "$script_dir/lib/core/common.sh"
+        printf '%s is the %s core engine.\n' "$tinypm_engine_name" "$tinypm_system_name"
+        [[ -n "$tinypm_tagline" ]] && printf '%s\n' "$tinypm_tagline"
+        cat <<EOF2
 
 Usage:
-  Parcel --version
+  $tinypm_engine_name --version
   grab <package>
+  grab-add-repo <repo> [name]
   tinypm help
 EOF2
         ;;

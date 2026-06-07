@@ -59,6 +59,9 @@ printf '%s\n' "$(tinypm_version_label)"
 printf '%s\n' '------------------------------------------------------------'
 printf '  %-16s %s\n' 'System' "$tinypm_system_name"
 printf '  %-16s %s\n' 'Engine' "$tinypm_engine_name"
+if [[ -n "$tinypm_tagline" ]]; then
+    printf '  %-16s %s\n' 'Tagline' "$tinypm_tagline"
+fi
 printf '  %-16s %s\n' 'Host' "$host_name"
 printf '  %-16s %s\n' 'OS' "$os_name"
 printf '  %-16s %s\n' 'Kernel' "$kernel_name"

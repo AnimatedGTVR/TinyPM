@@ -25,6 +25,7 @@ for module in \
     "$script_dir/lib/providers/flatpak.sh" \
     "$script_dir/lib/providers/snap.sh" \
     "$script_dir/lib/providers/apt.sh" \
+    "$script_dir/lib/providers/repo.sh" \
     "$script_dir/lib/core/actions.sh" \
     "$script_dir/lib/core/doctor.sh" \
     "$script_dir/lib/core/args.sh"
@@ -57,6 +58,10 @@ case "$action" in
         ;;
     list)
         list_pkgs "$provider"
+        ;;
+    add-repo)
+        [[ -n "$package" ]] || die "add-repo requires a repository spec"
+        add_repo "$package" "${repo_name:-}" "$provider"
         ;;
     managed)
         managed_pkgs

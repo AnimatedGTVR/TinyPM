@@ -42,8 +42,11 @@ load_flavor_metadata() {
     local config_file
 
     FLAVOR_NAME="TinyPM V3"
+    FLAVOR_ENGINE_NAME="Parcel"
+    FLAVOR_TAGLINE=""
 
     config_file="$(flavor_file flavor.conf || true)"
+    # shellcheck disable=SC1090
     [[ -n "$config_file" ]] && . "$config_file"
     return 0
 }
@@ -152,9 +155,10 @@ choose_native_pm() {
     fi
 
     print_logo
-    printf '%s / Parcel Installer\n' "$FLAVOR_NAME" >&2
+    printf '%s / %s Installer\n' "$FLAVOR_NAME" "$FLAVOR_ENGINE_NAME" >&2
+    [[ -n "$FLAVOR_TAGLINE" ]] && printf '%s\n' "$FLAVOR_TAGLINE" >&2
     if [[ "$detected" == "auto" ]]; then
-        printf 'No native package manager was detected. TinyPM V3 will still use Flatpak or Snap when available.\n\n' >&2
+        printf 'No native package manager was detected. %s will still use Flatpak or Snap when available.\n\n' "$FLAVOR_NAME" >&2
     else
         printf 'Detected native source: %s\n\n' "$detected" >&2
     fi
@@ -186,10 +190,12 @@ install_runtime() {
 
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/tiny"
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab"
+    ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab-add-repo"
 
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tinypm"
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tiny"
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab"
+    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab-add-repo"
     ln -sfn "$BIN_DIR/Parcel" "$LOCAL_BIN/Parcel"
     [[ -f "$BIN_DIR/syspm" ]] && ln -sfn "$BIN_DIR/syspm" "$LOCAL_BIN/syspm"
     ln -sfn "$BIN_DIR/version" "$LOCAL_BIN/version"

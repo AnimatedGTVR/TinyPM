@@ -194,6 +194,26 @@ update_pkgs() {
     esac
 }
 
+add_repo() {
+    local spec="$1"
+    local name="${2:-}"
+    local requested="${3:-auto}"
+    local pm
+
+    [[ -n "$spec" ]] || die "add-repo requires a repository spec"
+
+    if [[ "$(normalize_provider "$requested")" == "auto" || "$requested" == "native" ]]; then
+        pm="$(detect_native_pm)" || die "no supported native package manager was detected"
+    elif is_native_provider "$requested"; then
+        pm="$(native_pm_resolve "$requested")"
+    else
+        die "add-repo is only supported for native package managers (got: $requested)"
+    fi
+
+    ensure_provider_available "$pm"
+    repo_add "$spec" "$name" "$pm"
+}
+
 managed_pkgs() {
     print_tracked_packages
 }

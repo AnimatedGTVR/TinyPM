@@ -50,8 +50,55 @@ Examples:
 ```bash
 grab firefox
 grab -f org.mozilla.firefox
+grab -flat org.mozilla.firefox
+grab -flatpak org.mozilla.firefox
 grab -s firefox
 grab -n firefox
+```
+
+---
+
+## Adding extra sources
+
+`grab-add-repo` is the Parcel answer to `add-apt-repository`. It registers an
+extra source with your native backend, then `grab update` and `grab <package>`
+work as usual:
+
+```bash
+grab-add-repo ppa:hepp3n/cosmic-epoch
+grab update
+grab cosmic-session
+```
+
+You can also call it through the main CLI:
+
+```bash
+tinypm add-repo ppa:hepp3n/cosmic-epoch
+```
+
+Each backend has its own idea of an "extra source", so `grab-add-repo` routes
+the spec to the right call:
+
+| Backend  | What `grab-add-repo` does |
+| -------- | ------------------------- |
+| `apt`    | `add-apt-repository -y <spec>` (installs `software-properties-common` if needed) |
+| `dnf`    | `dnf config-manager --add-repo <url>`, or `dnf copr enable` for `copr:owner/project` |
+| `zypper` | `zypper addrepo --refresh <url> [name]` |
+| `pacman` | appends `[name]` / `Server` to `/etc/pacman.conf` (use `name=url`) |
+| `apk`    | appends the URL to `/etc/apk/repositories` |
+| `xbps`   | writes the repository into `/etc/xbps.d/10-tinypm.conf` |
+| `brew`   | `brew tap <owner/repo>` |
+| `nix`    | `nix-channel --add <url> [name]` then `nix-channel --update` |
+
+### Abora / Nix
+
+Abora is NixOS-based, so `grab-add-repo` registers a **Nix channel** there.
+PPAs are Ubuntu-only and cannot translate, so pass a channel URL (with an
+optional name) instead:
+
+```bash
+grab-add-repo https://nixos.org/channels/nixos-unstable unstable
+grab cosmic-session
 ```
 
 ---
@@ -134,13 +181,15 @@ syspm update
 ### Main
 
 ```bash
-grab [-f|-s|-n] <package>
+grab [-f|-flat|-flatpak|-s|-n] <package>
+grab-add-repo <repo> [name]
 Parcel --version
-tinypm install [-f|-s|-n|--brew|--nix] <package>
-tinypm search [-f|-s|-n|--brew|--nix] <query>
-tinypm remove [-f|-s|-n|--brew|--nix] <package>
-tinypm list [-f|-s|-n|--brew|--nix]
-tinypm update [-f|-s|-n|--brew|--nix]
+tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
+tinypm add-repo <repo> [name]
+tinypm search [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
+tinypm remove [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
+tinypm list [-f|-flat|-flatpak|-s|-n|--brew|--nix]
+tinypm update [-f|-flat|-flatpak|-s|-n|--brew|--nix]
 tinypm info <package>
 tinypm managed
 tinypm discover [query]
@@ -196,7 +245,7 @@ Abora note:
 Flags:
 
 - `-n`, `--native` forces the native package manager
-- `-f`, `--flatpak` forces Flatpak
+- `-f`, `-flat`, `-flatpak` forces Flatpak
 - `-s`, `--snap` forces Snap
 
 If you run `grab firefox` and more than one backend is available, TinyPM V3 asks which one to use.
