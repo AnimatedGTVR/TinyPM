@@ -30,6 +30,7 @@ Usage:
   $tinypm_engine_name --version
   grab <package>
   grab-add-repo <repo> [name]
+  grab-de <desktop>
   tinypm help
 EOF2
         ;;

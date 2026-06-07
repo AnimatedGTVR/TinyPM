@@ -191,11 +191,13 @@ install_runtime() {
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/tiny"
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab"
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab-add-repo"
+    ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab-de"
 
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tinypm"
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tiny"
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab"
     ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab-add-repo"
+    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab-de"
     ln -sfn "$BIN_DIR/Parcel" "$LOCAL_BIN/Parcel"
     [[ -f "$BIN_DIR/syspm" ]] && ln -sfn "$BIN_DIR/syspm" "$LOCAL_BIN/syspm"
     ln -sfn "$BIN_DIR/version" "$LOCAL_BIN/version"

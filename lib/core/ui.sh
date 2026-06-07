@@ -13,6 +13,8 @@ Usage:
   grab [-f|-flat|-flatpak|-s|-n] <package>
   grab-add-repo <repo> [name]
   tinypm add-repo <repo> [name]
+  grab-de <desktop>
+  tinypm de <desktop>
   tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
   tinypm search [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
   tinypm remove [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
@@ -60,6 +62,11 @@ Add a source (like add-apt-repository):
   grab update
   grab cosmic-session
   grab-add-repo https://nixos.org/channels/nixos-unstable unstable   # Abora/Nix
+
+Install a desktop environment:
+  grab-de cosmic        # also: gnome, plasma, xfce
+  grab-de gnome
+  On Nix/Abora, grab-de prints the configuration.nix lines to add.
 
 Notes:
   If multiple backends are installed, grab asks which source to use.

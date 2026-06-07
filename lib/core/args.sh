@@ -8,6 +8,7 @@ dispatch_multicall() {
     case "$prog_name" in
         grab) echo "install auto" ;;
         grab-add-repo) echo "add-repo auto" ;;
+        grab-de) echo "de auto" ;;
         search) echo "search auto" ;;
         term) echo "remove auto" ;;
         start) echo "run auto" ;;
@@ -36,6 +37,18 @@ parse_action_args() {
                 repo_name="$1"
                 shift
             fi
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        de)
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -gt 0 ]] || die "de requires a desktop environment name"
+            package="$1"
+            shift
             if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
                 shift
             fi
@@ -118,6 +131,19 @@ init_cli_context() {
             *) action="add-repo" ;;
         esac
         if [[ "$action" != "add-repo" ]]; then
+            shift || true
+        fi
+        parse_action_args "auto" "$@"
+        return
+    fi
+
+    if [[ "$prog_name" == "grab-de" ]]; then
+        case "${1:-}" in
+            ""|help|-h|--help) action="help" ;;
+            version|-v|--version) action="version" ;;
+            *) action="de" ;;
+        esac
+        if [[ "$action" != "de" ]]; then
             shift || true
         fi
         parse_action_args "auto" "$@"

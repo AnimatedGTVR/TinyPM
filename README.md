@@ -103,6 +103,48 @@ grab cosmic-session
 
 ---
 
+## Installing a desktop environment
+
+`grab-de` installs a whole desktop environment with the right packages,
+display manager, and session for your backend:
+
+```bash
+grab-de cosmic        # also: gnome, plasma, xfce
+```
+
+Or through the main CLI:
+
+```bash
+tinypm de cosmic
+```
+
+It maps a logical name to each backend's reality:
+
+| DE       | pacman | apt | dnf | nix (declarative) |
+| -------- | ------ | --- | --- | ----------------- |
+| `cosmic` | `cosmic` group | `cosmic-session` | `@cosmic-desktop` | `services.desktopManager.cosmic.enable` |
+| `gnome`  | `gnome gdm` | `gnome-core gdm3` | `@gnome-desktop` | `services.desktopManager.gnome.enable` |
+| `plasma` | `plasma sddm` | `kde-plasma-desktop sddm` | `@kde-desktop` | `services.desktopManager.plasma6.enable` |
+| `xfce`   | `xfce4 lightdm` | `xfce4 lightdm` | `@xfce-desktop` | `services.xserver.desktopManager.xfce.enable` |
+
+On imperative distros it installs the packages and enables the display manager.
+
+### Abora / Nix
+
+On NixOS a desktop environment is **declarative** — installing it with
+`nix-env` would give you a broken half-session. So on Nix, `grab-de` prints the
+exact `configuration.nix` lines plus the rebuild command instead of installing:
+
+```bash
+grab-de cosmic
+# -> add to /etc/nixos/configuration.nix:
+#      services.desktopManager.cosmic.enable = true;
+#      services.displayManager.cosmic-greeter.enable = true;
+# -> then: sudo nixos-rebuild switch && reboot
+```
+
+---
+
 ## Why V3
 
 TinyPM V3 is simpler on purpose.
@@ -183,9 +225,11 @@ syspm update
 ```bash
 grab [-f|-flat|-flatpak|-s|-n] <package>
 grab-add-repo <repo> [name]
+grab-de <desktop>
 Parcel --version
 tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
 tinypm add-repo <repo> [name]
+tinypm de <desktop>
 tinypm search [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
 tinypm remove [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
 tinypm list [-f|-flat|-flatpak|-s|-n|--brew|--nix]

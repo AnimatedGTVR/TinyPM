@@ -8,6 +8,7 @@ bash -n \
   "$repo_root/Parcel" \
   "$repo_root/grab" \
   "$repo_root/grab-add-repo" \
+  "$repo_root/grab-de" \
   "$repo_root/tinypm" \
   "$repo_root/syspm.sh" \
   "$repo_root/version" \
@@ -24,6 +25,7 @@ printf '[e2e] local command smoke...\n'
 "$repo_root/tinypm" doctor >/dev/null
 "$repo_root/grab" --version >/dev/null
 "$repo_root/grab-add-repo" help >/dev/null
+"$repo_root/grab-de" help >/dev/null
 "$repo_root/tinypm" search yq >/dev/null
 "$repo_root/version" >/dev/null
 version_output="$(mktemp)"
@@ -54,6 +56,7 @@ mkdir -p "$HOME"
 "$HOME/.local/bin/tiny" --version >/dev/null
 "$HOME/.local/bin/grab" help >/dev/null
 "$HOME/.local/bin/grab-add-repo" help >/dev/null
+"$HOME/.local/bin/grab-de" help >/dev/null
 "$HOME/.local/bin/syspm" help >/dev/null
 "$HOME/.local/bin/tinypm" doctor --fix >/dev/null
 

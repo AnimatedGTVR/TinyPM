@@ -26,6 +26,7 @@ for module in \
     "$script_dir/lib/providers/snap.sh" \
     "$script_dir/lib/providers/apt.sh" \
     "$script_dir/lib/providers/repo.sh" \
+    "$script_dir/lib/providers/de.sh" \
     "$script_dir/lib/core/actions.sh" \
     "$script_dir/lib/core/doctor.sh" \
     "$script_dir/lib/core/args.sh"
@@ -62,6 +63,10 @@ case "$action" in
     add-repo)
         [[ -n "$package" ]] || die "add-repo requires a repository spec"
         add_repo "$package" "${repo_name:-}" "$provider"
+        ;;
+    de)
+        [[ -n "$package" ]] || die "de requires a desktop environment name"
+        install_de "$package" "$provider"
         ;;
     managed)
         managed_pkgs
