@@ -42,10 +42,12 @@ if wait "$pid"; then
     cat "$stdout_file"
     cat "$stderr_file" >&2
     exit 0
+else
+    # Capture the status inside the else branch: after an if/fi with no else,
+    # $? resets to 0, which would mask the failure and report false success.
+    status=$?
+    printf "\r[fail] %s\n" "$msg" >&2
+    cat "$stdout_file"
+    cat "$stderr_file" >&2
+    exit "$status"
 fi
-
-status=$?
-printf "\r[fail] %s\n" "$msg" >&2
-cat "$stdout_file"
-cat "$stderr_file" >&2
-exit "$status"
