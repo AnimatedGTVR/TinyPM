@@ -28,7 +28,8 @@ install_flatpak() {
         return
     fi
 
-    die "flatpak install failed for $package"
+    printf 'Forge: flatpak install failed for %s\n' "$package" >&2
+    return 1
 }
 
 flatpak_search() {

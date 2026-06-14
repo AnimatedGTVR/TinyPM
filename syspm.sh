@@ -26,10 +26,13 @@ On Abora, that native path is typically Nix.
 
 Usage:
   syspm update
-  syspm install <package>
+  syspm install <package> [<package>...]
   syspm search <query>
-  syspm remove <package>
+  syspm remove <package> [<package>...]
   syspm list
+  syspm pin <package>
+  syspm unpin <package>
+  syspm pinned
   syspm doctor
   syspm version
 EOH
@@ -55,6 +58,18 @@ case "${1:-help}" in
   list|ls)
     shift
     exec "$tinypm_cmd" list -n "$@"
+    ;;
+  pin)
+    shift
+    exec "$tinypm_cmd" pin -n "$@"
+    ;;
+  unpin)
+    shift
+    exec "$tinypm_cmd" unpin "$@"
+    ;;
+  pinned)
+    shift
+    exec "$tinypm_cmd" pinned "$@"
     ;;
   doctor)
     shift

@@ -4,9 +4,9 @@
 spinner="$script_dir/_spinner"
 version_cmd="$script_dir/version"
 use_host_backend=0
-tinypm_system_name="TinyPM V3"
-tinypm_engine_name="Parcel"
-tinypm_version="3.0.0"
+tinypm_system_name="TinyPM V4"
+tinypm_engine_name="Forge"
+tinypm_version="4.0.0"
 tinypm_tagline=""
 
 tinypm_active_flavor() {
@@ -22,8 +22,8 @@ tinypm_active_flavor() {
 tinypm_load_flavor_metadata() {
     local config_file
 
-    tinypm_system_name="TinyPM V3"
-    tinypm_engine_name="Parcel"
+    tinypm_system_name="TinyPM V4"
+    tinypm_engine_name="Forge"
     tinypm_tagline=""
 
     config_file="$(tinypm_flavor_file flavor.conf 2>/dev/null || true)"
@@ -66,7 +66,7 @@ if [[ "${container:-}" == "flatpak" ]] && command -v flatpak-spawn >/dev/null 2>
 fi
 
 die() {
-    echo "Parcel: $*" >&2
+    echo "Forge: $*" >&2
     exit 1
 }
 
@@ -364,7 +364,7 @@ prompt_install_provider() {
         return 0
     }
 
-    printf '\nParcel install routing for %s\n' "$package" >&2
+    printf '\nForge install routing for %s\n' "$package" >&2
     printf 'Multiple package sources are available. Choose one:\n' >&2
 
     index=1

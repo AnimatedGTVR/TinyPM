@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Parcel was the TinyPM V3 engine name — kept as a compat alias for Forge (V4).
 set -euo pipefail
 
 script_path="${BASH_SOURCE[0]}"

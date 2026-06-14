@@ -41,8 +41,8 @@ resolved_catalog_file() {
 load_flavor_metadata() {
     local config_file
 
-    FLAVOR_NAME="TinyPM V3"
-    FLAVOR_ENGINE_NAME="Parcel"
+    FLAVOR_NAME="TinyPM V4"
+    FLAVOR_ENGINE_NAME="Forge"
     FLAVOR_TAGLINE=""
 
     config_file="$(flavor_file flavor.conf || true)"
@@ -108,7 +108,7 @@ parse_cli_options() {
                 ;;
             -h|--help)
                 cat <<'EOH'
-TinyPM V3 / Parcel installer
+TinyPM V4 / Forge installer
 
 Usage:
   ./install.sh [--auto] [--native <pm>] [--flavor <name>] [--yes]
@@ -177,6 +177,7 @@ install_runtime() {
     cp -f "$HERE/_spinner" "$BIN_DIR/_spinner"
     cp -f "$HERE/tinypm" "$BIN_DIR/tinypm"
     cp -f "$HERE/version" "$BIN_DIR/version"
+    cp -f "$HERE/Forge" "$BIN_DIR/Forge"
     cp -f "$HERE/Parcel" "$BIN_DIR/Parcel"
     if [[ -f "$HERE/syspm.sh" ]]; then
         cp -f "$HERE/syspm.sh" "$BIN_DIR/syspm"
@@ -185,7 +186,8 @@ install_runtime() {
     cp -f "$(resolved_logo_file)" "$BIN_DIR/share/logo.txt"
     cp -f "$(resolved_catalog_file)" "$BIN_DIR/share/catalog.tsv"
 
-    chmod +x "$BIN_DIR/_spinner" "$BIN_DIR/tinypm" "$BIN_DIR/version" "$BIN_DIR/Parcel"
+    chmod +x "$BIN_DIR/_spinner" "$BIN_DIR/tinypm" "$BIN_DIR/version" \
+              "$BIN_DIR/Forge" "$BIN_DIR/Parcel"
     [[ -f "$BIN_DIR/syspm" ]] && chmod +x "$BIN_DIR/syspm"
 
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/tiny"
@@ -193,12 +195,13 @@ install_runtime() {
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab-add-repo"
     ln -sfn "$BIN_DIR/tinypm" "$BIN_DIR/grab-de"
 
-    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tinypm"
-    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/tiny"
-    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab"
-    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab-add-repo"
-    ln -sfn "$BIN_DIR/tinypm" "$LOCAL_BIN/grab-de"
-    ln -sfn "$BIN_DIR/Parcel" "$LOCAL_BIN/Parcel"
+    ln -sfn "$BIN_DIR/tinypm"  "$LOCAL_BIN/tinypm"
+    ln -sfn "$BIN_DIR/tinypm"  "$LOCAL_BIN/tiny"
+    ln -sfn "$BIN_DIR/tinypm"  "$LOCAL_BIN/grab"
+    ln -sfn "$BIN_DIR/tinypm"  "$LOCAL_BIN/grab-add-repo"
+    ln -sfn "$BIN_DIR/tinypm"  "$LOCAL_BIN/grab-de"
+    ln -sfn "$BIN_DIR/Forge"   "$LOCAL_BIN/Forge"
+    ln -sfn "$BIN_DIR/Parcel"  "$LOCAL_BIN/Parcel"
     [[ -f "$BIN_DIR/syspm" ]] && ln -sfn "$BIN_DIR/syspm" "$LOCAL_BIN/syspm"
     ln -sfn "$BIN_DIR/version" "$LOCAL_BIN/version"
     ln -sfn "$BIN_DIR/_spinner" "$LOCAL_BIN/_spinner"
@@ -252,7 +255,9 @@ main() {
     printf "  \"\$HOME/.tinypm/bin/tinypm\" help\n"
     printf "  \"\$HOME/.tinypm/bin/tinypm\" selftest\n"
     printf "  \"\$HOME/.tinypm/bin/tinypm\" doctor --fix\n"
-    printf '  grab firefox\n'
+    printf '  grab firefox vlc\n'
+    printf '  tinypm bundle Gaming\n'
+    printf '  Forge --version\n'
     printf '  syspm update\n'
 }
 

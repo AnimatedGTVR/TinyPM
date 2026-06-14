@@ -3,6 +3,7 @@
 state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 state_root="$state_home/tinypm"
 state_db="$state_root/packages.tsv"
+pinned_db="$state_root/pinned.tsv"
 
 ensure_state_dir() {
     mkdir -p "$state_root"
@@ -87,7 +88,7 @@ state_export() {
         : > "$destination"
     fi
 
-    printf 'Exported Parcel state to %s\n' "$destination"
+    printf 'Exported Forge state to %s\n' "$destination"
 }
 
 state_import() {
@@ -104,5 +105,56 @@ state_import() {
 
     ensure_state_dir
     mv "$tmp_file" "$state_db"
-    printf 'Imported Parcel state from %s\n' "$source"
+    printf 'Imported Forge state from %s\n' "$source"
+}
+
+# Pin management
+
+is_pinned() {
+    local package="$1"
+
+    [[ -f "$pinned_db" ]] || return 1
+    awk -F '\t' -v pkg="$package" '$1==pkg {found=1} END {exit(found?0:1)}' "$pinned_db"
+}
+
+pin_package() {
+    local package="$1"
+    local provider="${2:-unknown}"
+    local pinned_at tmp_file
+
+    ensure_state_dir
+    pinned_at="$(date -Iseconds)"
+    tmp_file="$(mktemp)"
+
+    if [[ -f "$pinned_db" ]]; then
+        awk -F '\t' -v pkg="$package" '$1 != pkg' "$pinned_db" >"$tmp_file"
+    fi
+
+    printf '%s\t%s\t%s\n' "$package" "$provider" "$pinned_at" >>"$tmp_file"
+    mv "$tmp_file" "$pinned_db"
+}
+
+unpin_package() {
+    local package="$1"
+    local tmp_file
+
+    [[ -f "$pinned_db" ]] || return 0
+    tmp_file="$(mktemp)"
+    awk -F '\t' -v pkg="$package" '$1 != pkg' "$pinned_db" >"$tmp_file"
+    mv "$tmp_file" "$pinned_db"
+}
+
+print_pinned_packages() {
+    if [[ ! -f "$pinned_db" ]] || [[ ! -s "$pinned_db" ]]; then
+        printf 'No packages are currently pinned.\n'
+        return
+    fi
+
+    awk -F '\t' 'BEGIN { printf "%-40s %-12s %s\n", "PACKAGE", "PROVIDER", "PINNED" } \
+        { printf "%-40s %-12s %s\n", $1, $2, $3 }' "$pinned_db"
+}
+
+list_pinned_packages() {
+    [[ -f "$pinned_db" ]] || return 0
+    awk -F '\t' '{print $1}' "$pinned_db"
 }

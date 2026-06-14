@@ -53,31 +53,85 @@ if [[ "$native_pm" != "none" ]]; then
     native_status="$(native_pm_label "$native_pm")"
 fi
 
-cat "$logo_file"
-printf '\n'
-printf '%s\n' "$(tinypm_version_label)"
-printf '%s\n' '------------------------------------------------------------'
-printf '  %-16s %s\n' 'System' "$tinypm_system_name"
-printf '  %-16s %s\n' 'Engine' "$tinypm_engine_name"
-if [[ -n "$tinypm_tagline" ]]; then
-    printf '  %-16s %s\n' 'Tagline' "$tinypm_tagline"
+supports_color=0
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != "dumb" ]]; then
+    supports_color=1
 fi
-printf '  %-16s %s\n' 'Host' "$host_name"
-printf '  %-16s %s\n' 'OS' "$os_name"
-printf '  %-16s %s\n' 'Kernel' "$kernel_name"
-printf '  %-16s %s\n' 'Arch' "$arch_name"
-printf '  %-16s %s\n' 'Desktop' "$desktop_name"
-printf '  %-16s %s\n' 'Session' "$session_name"
-printf '  %-16s %s\n' 'Uptime' "$uptime_text"
-printf '  %-16s %s\n' 'Backend Mode' "$backend_mode"
-printf '  %-16s %s\n' 'Auth Mode' "$auth_mode"
-printf '  %-16s %s\n' 'Native PM' "$native_pm"
-printf '  %-16s %s\n' 'Backends' "native=$native_status flatpak=$flatpak_status snap=$snap_status"
-printf '  %-16s %s\n' 'Commands' "$command_count"
-printf '  %-16s %s\n' 'Desktop Apps' "$app_total"
-printf '  %-16s %s\n' 'Tracked' "$tracked_count"
-printf '  %-16s %s\n' 'Catalog' "$catalog_total"
-printf '  %-16s %s\n' 'Flavor' "$flavor_key"
-printf '  %-16s %s\n' 'State DB' "$(active_state_db)"
-printf '  %-16s %s\n' 'Config' "$tinypm_config_file"
-printf '  %-16s %s\n' 'Date' "$(date)"
+
+if [[ "$supports_color" -eq 1 ]]; then
+    c_key=$'\033[1;36m'
+    c_label=$'\033[1;97m'
+    c_value=$'\033[0;37m'
+    c_dim=$'\033[0;90m'
+    c_reset=$'\033[0m'
+else
+    c_key=''
+    c_label=''
+    c_value=''
+    c_dim=''
+    c_reset=''
+fi
+
+mapfile -t logo_lines < "$logo_file"
+while (( ${#logo_lines[@]} > 0 )) && [[ -z "${logo_lines[0]//[[:space:]]/}" ]]; do
+    logo_lines=("${logo_lines[@]:1}")
+done
+while (( ${#logo_lines[@]} > 0 )) && [[ -z "${logo_lines[-1]//[[:space:]]/}" ]]; do
+    unset 'logo_lines[-1]'
+done
+logo_width=0
+for line in "${logo_lines[@]}"; do
+    line_length=${#line}
+    if (( line_length > logo_width )); then
+        logo_width=$line_length
+    fi
+done
+
+separator="${c_dim}$(printf '%.34s' '----------------------------------')${c_reset}"
+info_lines=(
+    "${c_label}$(tinypm_version_label)${c_reset}"
+    "$separator"
+    "${c_key}system${c_reset}    ${c_value}${tinypm_system_name}${c_reset}"
+    "${c_key}engine${c_reset}    ${c_value}${tinypm_engine_name}${c_reset}"
+    "${c_key}tagline${c_reset}   ${c_value}${tinypm_tagline:-none}${c_reset}"
+    "${c_key}host${c_reset}      ${c_value}${host_name}${c_reset}"
+    "${c_key}os${c_reset}        ${c_value}${os_name}${c_reset}"
+    "${c_key}kernel${c_reset}    ${c_value}${kernel_name}${c_reset}"
+    "${c_key}arch${c_reset}      ${c_value}${arch_name}${c_reset}"
+    "${c_key}desktop${c_reset}   ${c_value}${desktop_name}${c_reset}"
+    "${c_key}session${c_reset}   ${c_value}${session_name}${c_reset}"
+    "${c_key}uptime${c_reset}    ${c_value}${uptime_text}${c_reset}"
+    "${c_key}backend${c_reset}   ${c_value}${backend_mode}${c_reset}"
+    "${c_key}auth${c_reset}      ${c_value}${auth_mode}${c_reset}"
+    "${c_key}native${c_reset}    ${c_value}${native_pm}${c_reset}"
+    "${c_key}backends${c_reset}  ${c_value}native=${native_status} flatpak=${flatpak_status} snap=${snap_status}${c_reset}"
+    "${c_key}commands${c_reset}  ${c_value}${command_count}${c_reset}"
+    "${c_key}apps${c_reset}      ${c_value}${app_total}${c_reset}"
+    "${c_key}tracked${c_reset}   ${c_value}${tracked_count}${c_reset}"
+    "${c_key}catalog${c_reset}   ${c_value}${catalog_total}${c_reset}"
+    "${c_key}flavor${c_reset}    ${c_value}${flavor_key}${c_reset}"
+    "${c_key}state db${c_reset}  ${c_value}$(active_state_db)${c_reset}"
+    "${c_key}config${c_reset}    ${c_value}${tinypm_config_file}${c_reset}"
+    "${c_key}date${c_reset}      ${c_value}$(date)${c_reset}"
+)
+
+line_count=${#logo_lines[@]}
+if (( ${#info_lines[@]} > line_count )); then
+    line_count=${#info_lines[@]}
+fi
+
+padding=$((logo_width + 4))
+for ((i = 0; i < line_count; i++)); do
+    logo_line=""
+    info_line=""
+
+    if (( i < ${#logo_lines[@]} )); then
+        logo_line="${logo_lines[$i]}"
+    fi
+
+    if (( i < ${#info_lines[@]} )); then
+        info_line="${info_lines[$i]}"
+    fi
+
+    printf '%-*s%s\n' "$padding" "$logo_line" "$info_line"
+done

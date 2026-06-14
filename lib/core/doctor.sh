@@ -27,12 +27,13 @@ doctor_fix_runtime() {
 
     mkdir -p "$local_bin"
 
-    ln -sfn "$script_dir/tinypm" "$local_bin/tinypm"
-    ln -sfn "$script_dir/tinypm" "$local_bin/tiny"
-    ln -sfn "$script_dir/tinypm" "$local_bin/grab"
-    ln -sfn "$script_dir/tinypm" "$local_bin/grab-add-repo"
-    ln -sfn "$script_dir/tinypm" "$local_bin/grab-de"
-    ln -sfn "$script_dir/Parcel" "$local_bin/Parcel"
+    ln -sfn "$script_dir/tinypm"  "$local_bin/tinypm"
+    ln -sfn "$script_dir/tinypm"  "$local_bin/tiny"
+    ln -sfn "$script_dir/tinypm"  "$local_bin/grab"
+    ln -sfn "$script_dir/tinypm"  "$local_bin/grab-add-repo"
+    ln -sfn "$script_dir/tinypm"  "$local_bin/grab-de"
+    ln -sfn "$script_dir/Forge"   "$local_bin/Forge"
+    ln -sfn "$script_dir/Forge"   "$local_bin/Parcel"
     ln -sfn "$script_dir/version" "$local_bin/version"
     ln -sfn "$script_dir/_spinner" "$local_bin/_spinner"
 
@@ -59,11 +60,13 @@ selftest() {
     local failures=0
     local native_pm="none"
 
-    printf 'Parcel selftest\n'
+    printf 'Forge selftest\n'
     printf '%s\n' '------------------------------------------------------------'
 
     [[ -x "$script_dir/tinypm" ]] || { echo '[fail] missing tinypm entrypoint'; failures=$((failures+1)); }
+    [[ -x "$script_dir/Forge" ]]  || { echo '[fail] missing Forge entrypoint'; failures=$((failures+1)); }
     [[ -x "$script_dir/version" ]] || { echo '[fail] missing version command'; failures=$((failures+1)); }
+    [[ -x "$script_dir/_spinner" ]] || { echo '[fail] missing _spinner'; failures=$((failures+1)); }
 
     if detect_native_pm >/dev/null 2>&1; then
         native_pm="$(detect_native_pm)"
@@ -91,6 +94,12 @@ selftest() {
         failures=$((failures+1))
     fi
 
+    if [[ -f "$(tinypm_catalog_file)" ]]; then
+        local catalog_size
+        catalog_size="$(awk 'END{print NR}' "$(tinypm_catalog_file)")"
+        echo "[ok] catalog entries: $catalog_size"
+    fi
+
     if [[ "$failures" -eq 0 ]]; then
         echo '[ok] selftest passed'
         return 0
@@ -106,6 +115,8 @@ doctor() {
     local snap_state="missing"
     local native_state="missing"
     local native_pm="none"
+    local forge_state="missing"
+    local parcel_state="compat-alias"
 
     if [[ "${doctor_fix:-0}" -eq 1 ]]; then
         doctor_fix_runtime
@@ -128,22 +139,27 @@ doctor() {
         native_state="$(native_pm_label "$native_pm")"
     fi
 
-    printf 'Parcel doctor\n'
+    if [[ -e "$HOME/.local/bin/Forge" ]]; then
+        forge_state="linked"
+    fi
+
+    printf 'Forge doctor\n'
     printf '%s\n' '------------------------------------------------------------'
-    printf '  %-16s %s\n' 'script_dir' "$script_dir"
-    printf '  %-16s %s\n' 'path' "$path_state"
-    printf '  %-16s %s\n' 'tinypm' "$(doctor_command_path tinypm)"
-    printf '  %-16s %s\n' 'tiny' "$(doctor_command_path tiny)"
-    printf '  %-16s %s\n' 'grab' "$(doctor_command_path grab)"
+    printf '  %-16s %s\n' 'script_dir'   "$script_dir"
+    printf '  %-16s %s\n' 'path'         "$path_state"
+    printf '  %-16s %s\n' 'tinypm'       "$(doctor_command_path tinypm)"
+    printf '  %-16s %s\n' 'tiny'         "$(doctor_command_path tiny)"
+    printf '  %-16s %s\n' 'grab'         "$(doctor_command_path grab)"
     printf '  %-16s %s\n' 'grab-add-repo' "$(doctor_command_path grab-add-repo)"
-    printf '  %-16s %s\n' 'grab-de' "$(doctor_command_path grab-de)"
-    printf '  %-16s %s\n' 'Parcel' "$(doctor_command_path Parcel)"
-    printf '  %-16s %s\n' 'syspm' "$(doctor_command_path syspm)"
+    printf '  %-16s %s\n' 'grab-de'      "$(doctor_command_path grab-de)"
+    printf '  %-16s %s\n' 'Forge'        "$(doctor_command_path Forge)"
+    printf '  %-16s %s\n' 'Parcel'       "$parcel_state -> Forge"
+    printf '  %-16s %s\n' 'syspm'        "$(doctor_command_path syspm)"
     printf '  %-16s %s\n' 'backend_mode' "$([[ "$use_host_backend" -eq 1 ]] && echo host || echo local)"
-    printf '  %-16s %s\n' 'auth_mode' "$(backend_auth_mode)"
-    printf '  %-16s %s\n' 'native_pm' "$native_pm"
-    printf '  %-16s %s\n' 'state_db' "$(active_state_db)"
-    printf '  %-16s %s\n' 'flatpak' "$flatpak_state"
-    printf '  %-16s %s\n' 'snap' "$snap_state"
-    printf '  %-16s %s\n' 'native' "$native_state"
+    printf '  %-16s %s\n' 'auth_mode'    "$(backend_auth_mode)"
+    printf '  %-16s %s\n' 'native_pm'    "$native_pm"
+    printf '  %-16s %s\n' 'state_db'     "$(active_state_db)"
+    printf '  %-16s %s\n' 'flatpak'      "$flatpak_state"
+    printf '  %-16s %s\n' 'snap'         "$snap_state"
+    printf '  %-16s %s\n' 'native'       "$native_state"
 }

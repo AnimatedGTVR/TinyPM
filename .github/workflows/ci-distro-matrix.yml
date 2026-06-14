@@ -1,4 +1,4 @@
-name: Distro Matrix Smoke
+name: TinyPM V4 Distro Matrix Smoke
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: TinyPM smoke
+      - name: TinyPM V4 smoke
         shell: bash
         run: |
           set -euo pipefail

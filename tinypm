@@ -20,6 +20,7 @@ for module in \
     "$script_dir/lib/core/config.sh" \
     "$script_dir/lib/core/common.sh" \
     "$script_dir/lib/core/state.sh" \
+    "$script_dir/lib/core/history.sh" \
     "$script_dir/lib/core/ui.sh" \
     "$script_dir/lib/core/apps.sh" \
     "$script_dir/lib/providers/flatpak.sh" \
@@ -28,12 +29,14 @@ for module in \
     "$script_dir/lib/providers/repo.sh" \
     "$script_dir/lib/providers/de.sh" \
     "$script_dir/lib/providers/anix.sh" \
+    "$script_dir/lib/providers/native.sh" \
+    "$script_dir/lib/core/forge.sh" \
     "$script_dir/lib/core/actions.sh" \
     "$script_dir/lib/core/doctor.sh" \
     "$script_dir/lib/core/args.sh"
 do
     [[ -r "$module" ]] || {
-        echo "Parcel: missing module $module" >&2
+        echo "Forge: missing module $module" >&2
         exit 1
     }
     . "$module"
@@ -43,8 +46,32 @@ init_cli_context "$@"
 
 case "$action" in
     install)
-        [[ -n "$package" ]] || die "install requires a package name"
-        install_pkg "$package" "$provider"
+        [[ "${#packages[@]}" -gt 0 ]] || die "install requires at least one package name"
+
+        if [[ "${dry_run:-0}" -eq 1 ]]; then
+            forge_plan "$provider" "${packages[@]}"
+        else
+            _total="${#packages[@]}" _i=0 _failed=0
+            if [[ "$_total" -gt 1 ]]; then
+                printf 'Grabbing %d packages: %s\n' "$_total" "$(IFS=', '; echo "${packages[*]}")"
+            fi
+            for pkg in "${packages[@]}"; do
+                _i=$((_i + 1))
+                [[ "$_total" -gt 1 ]] && printf '[%d/%d] ' "$_i" "$_total"
+                install_pkg "$pkg" "$provider" || {
+                    printf 'Install failed: %s\n' "$pkg" >&2
+                    printf '  Suggestion: tinypm search %s\n' "$pkg" >&2
+                    _failed=$((_failed + 1))
+                }
+            done
+            if [[ "$_total" -gt 1 ]]; then
+                _ok=$((_total - _failed))
+                printf 'Done: %d installed' "$_ok"
+                [[ "$_failed" -gt 0 ]] && printf ', %d failed' "$_failed"
+                printf '.\n'
+                [[ "$_failed" -gt 0 ]] && exit 1
+            fi
+        fi
         ;;
     search)
         [[ -n "$package" ]] || die "search requires a query"
@@ -55,8 +82,15 @@ case "$action" in
         info_pkg "$package"
         ;;
     remove|uninstall)
-        [[ -n "$package" ]] || die "remove requires a package name"
-        remove_pkg "$package" "$provider"
+        [[ "${#packages[@]}" -gt 0 ]] || die "remove requires at least one package name"
+        _total="${#packages[@]}" _i=0
+        [[ "$_total" -gt 1 ]] && printf 'Removing %d packages: %s\n' "$_total" "$(IFS=', '; echo "${packages[*]}")"
+        for pkg in "${packages[@]}"; do
+            _i=$((_i + 1))
+            [[ "$_total" -gt 1 ]] && printf '[%d/%d] ' "$_i" "$_total"
+            remove_pkg "$pkg" "$provider"
+        done
+        [[ "$_total" -gt 1 ]] && printf 'Done: %d removed.\n' "$_total"
         ;;
     list)
         list_pkgs "$provider"
@@ -82,8 +116,41 @@ case "$action" in
         [[ -n "$package" ]] || die "run requires an app id or snap/flatpak target"
         run_pkg "$package" "$provider"
         ;;
-    update)
+    update|upgrade)
         update_pkgs "$provider"
+        ;;
+    check)
+        [[ -n "$package" ]] || die "check requires a package name"
+        forge_check "$package"
+        ;;
+    pin)
+        [[ -n "$package" ]] || die "pin requires a package name"
+        pin_pkg "$package" "$provider"
+        ;;
+    unpin)
+        [[ -n "$package" ]] || die "unpin requires a package name"
+        unpin_pkg "$package"
+        ;;
+    pinned)
+        pinned_pkgs
+        ;;
+    bundle)
+        [[ -n "$package" ]] || die "bundle requires a category name or 'list'"
+        if [[ "$package" == "list" ]]; then
+            bundle_list
+        else
+            bundle_install "$package" "$provider"
+        fi
+        ;;
+    sync)
+        if [[ "${sync_generate:-0}" -eq 1 ]]; then
+            sync_generate_manifest "${sync_output:-}"
+        else
+            sync_install_manifest "${package:-}"
+        fi
+        ;;
+    history)
+        show_history "${history_limit:-50}"
         ;;
     doctor)
         doctor

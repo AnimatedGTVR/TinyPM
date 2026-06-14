@@ -24,6 +24,7 @@ install_pkg() {
     esac
 
     record_tracked_package "$package" "$provider"
+    record_history "install" "$package" "$provider"
 }
 
 search_pkg() {
@@ -100,6 +101,7 @@ remove_pkg() {
     esac
 
     forget_tracked_package "$package"
+    record_history "remove" "$package" "$provider"
 }
 
 list_pkgs() {
@@ -166,8 +168,15 @@ run_pkg() {
 
 update_pkgs() {
     local provider native_pm
+    local pinned_list=()
 
     provider="$(normalize_provider "${1:-auto}")"
+
+    mapfile -t pinned_list < <(list_pinned_packages 2>/dev/null || true)
+
+    if [[ "${#pinned_list[@]}" -gt 0 ]]; then
+        printf 'Pinned packages (skipped): %s\n' "${pinned_list[*]}"
+    fi
 
     case "$provider" in
         flatpak)
@@ -200,6 +209,8 @@ update_pkgs() {
             fi
             ;;
     esac
+
+    record_history "update" "all" "${provider:-auto}"
 }
 
 add_repo() {
@@ -232,11 +243,16 @@ info_pkg() {
     local tracked_added="unknown"
     local available_providers=""
     local native_pm=""
+    local pinned_status="no"
 
     if tracked_provider="$(tracked_provider_for "$package" 2>/dev/null)"; then
         tracked_added="$(tracked_timestamp_for "$package" 2>/dev/null || echo unknown)"
     else
         tracked_provider="untracked"
+    fi
+
+    if is_pinned "$package" 2>/dev/null; then
+        pinned_status="yes"
     fi
 
     if backend_has_cmd flatpak && package_in_flatpak "$package"; then
@@ -249,14 +265,157 @@ info_pkg() {
     if [[ -n "$native_pm" ]] && package_in_apt "$package" "$native_pm"; then
         available_providers="${available_providers} $native_pm"
     fi
-    echo "Package: $package"
-    echo "Tracked by TinyPM: $tracked_provider"
+
+    printf 'Package:       %s\n' "$package"
+    printf 'Tracked:       %s\n' "$tracked_provider"
     if [[ "$tracked_provider" != "untracked" ]]; then
-        echo "Tracked since: $tracked_added"
+        printf 'Tracked since: %s\n' "$tracked_added"
     fi
+    printf 'Pinned:        %s\n' "$pinned_status"
     if [[ -n "$available_providers" ]]; then
-        echo "Installed via:${available_providers}"
+        printf 'Installed via:%s\n' "$available_providers"
     else
-        echo "Installed via: not detected"
+        printf 'Installed via: not detected\n'
     fi
+
+    # Catalog lookup by package ID or display name
+    local hits=0
+    while IFS=$'\t' read -r name cat src pkg desc; do
+        if [[ "${pkg,,}" == "${package,,}" || "${name,,}" == "${package,,}" ]]; then
+            if [[ "$hits" -eq 0 ]]; then
+                printf '\nCatalog:\n'
+            fi
+            printf '  %-22s %-12s %-8s  %s\n' "$name" "$cat" "$src" "$desc"
+            hits=$((hits + 1))
+        fi
+    done < "$(tinypm_catalog_file)"
+}
+
+# Pin management
+
+pin_pkg() {
+    local package="$1"
+    local provider_hint="${2:-auto}"
+    local resolved_provider
+
+    resolved_provider="$(tracked_provider_for "$package" 2>/dev/null || echo "${provider_hint}")"
+    pin_package "$package" "$resolved_provider"
+    record_history "pin" "$package" "$resolved_provider"
+    printf 'Pinned %s (%s) — will be skipped during updates.\n' "$package" "$resolved_provider"
+}
+
+unpin_pkg() {
+    local package="$1"
+
+    unpin_package "$package"
+    record_history "unpin" "$package" "n/a"
+    printf 'Unpinned %s — will be included in future updates.\n' "$package"
+}
+
+pinned_pkgs() {
+    print_pinned_packages
+}
+
+# History
+
+show_history() {
+    local limit="${1:-50}"
+    print_history "$limit"
+}
+
+# Bundle — install a full catalog category
+
+bundle_list() {
+    printf '%-20s %s\n' "CATEGORY" "PACKAGES"
+    catalog_entries | awk -F '\t' \
+        '{count[$2]++} END { for (cat in count) printf "%-20s %d\n", cat, count[cat] }' \
+        | sort
+}
+
+bundle_install() {
+    local category="$1"
+    local provider_pref="${2:-auto}"
+    local found=0
+    local name cat_col source pkg desc
+
+    while IFS=$'\t' read -r name cat_col source pkg desc; do
+        [[ "${cat_col,,}" == "${category,,}" ]] || continue
+        found=$((found + 1))
+
+        case "$provider_pref" in
+            flatpak) [[ "$source" == "flatpak" ]] || continue ;;
+            snap)    [[ "$source" == "snap" ]] || continue ;;
+            auto)    ;;
+            native|apt|dnf|pacman|xbps|zypper|apk|emerge|brew|nix)
+                [[ "$source" != "flatpak" && "$source" != "snap" ]] || continue
+                ;;
+        esac
+
+        printf '\nInstalling %s (%s)...\n' "$name" "$pkg"
+        install_pkg "$pkg" "${source:-${provider_pref:-auto}}" \
+            || printf 'Warning: failed to install %s, continuing.\n' "$pkg"
+    done < <(catalog_entries)
+
+    if [[ "$found" -eq 0 ]]; then
+        printf 'No packages found in category: %s\n' "$category"
+        printf 'Available categories:\n'
+        catalog_entries | awk -F '\t' '{print $2}' | sort -u | awk '{print "  " $0}'
+        return 1
+    fi
+}
+
+# Sync — install from a package manifest file
+
+sync_install_manifest() {
+    local manifest_file="${1:-}"
+    local installed=0 failed=0
+    local line provider pkg
+
+    [[ -n "$manifest_file" ]] || die "sync requires a manifest file path (or use --generate)"
+    [[ -f "$manifest_file" ]] || die "manifest file not found: $manifest_file"
+
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line//[[:space:]]/}"
+        [[ -n "$line" ]] || continue
+
+        if [[ "$line" == *:* ]]; then
+            provider="${line%%:*}"
+            pkg="${line#*:}"
+        else
+            provider="auto"
+            pkg="$line"
+        fi
+
+        printf 'Syncing %s (%s)...\n' "$pkg" "$provider"
+        if install_pkg "$pkg" "$provider"; then
+            installed=$((installed + 1))
+        else
+            printf 'Warning: failed to install %s\n' "$pkg"
+            failed=$((failed + 1))
+        fi
+    done < "$manifest_file"
+
+    printf '\nSync complete: %d installed, %d failed\n' "$installed" "$failed"
+}
+
+sync_generate_manifest() {
+    local output_file="${1:-tinypm-packages.txt}"
+
+    if ! state_db_exists; then
+        printf 'No tracked packages to export.\n'
+        return
+    fi
+
+    {
+        printf '# TinyPM V4 package manifest\n'
+        printf '# Generated: %s\n' "$(date -Iseconds)"
+        printf '# Format: provider:package\n'
+        printf '\n'
+        awk -F '\t' '{ print $2 ":" $1 }' "$state_db"
+    } >"$output_file"
+
+    local count
+    count="$(awk 'END{print NR+0}' "$state_db")"
+    printf 'Wrote manifest to %s (%d packages)\n' "$output_file" "$count"
 }

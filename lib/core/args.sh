@@ -3,27 +3,39 @@
 
 doctor_fix=0
 repo_name=""
+packages=()
+package=""
+sync_generate=0
+sync_output=""
+history_limit=50
+dry_run=0
 
 dispatch_multicall() {
     case "$prog_name" in
-        grab) echo "install auto" ;;
+        grab)          echo "install auto" ;;
         grab-add-repo) echo "add-repo auto" ;;
-        grab-de) echo "de auto" ;;
-        search) echo "search auto" ;;
-        term) echo "remove auto" ;;
-        start) echo "run auto" ;;
+        grab-de)       echo "de auto" ;;
+        search)        echo "search auto" ;;
+        term)          echo "remove auto" ;;
+        start)         echo "run auto" ;;
         supdate) echo "update auto" ;;
-        *) echo "help auto" ;;
+        *)       echo "help auto" ;;
     esac
 }
 
 parse_action_args() {
     local default_provider="$1"
+    local provider_candidate=""
     shift
 
     provider="$default_provider"
     package=""
     repo_name=""
+    packages=()
+    sync_generate=0
+    sync_output=""
+    history_limit=50
+    dry_run=0
 
     case "$action" in
         add-repo)
@@ -67,10 +79,19 @@ parse_action_args() {
                 esac
             done
             ;;
-        selftest|managed|apps|help|version|-v|--version)
+        selftest|managed|apps|help|version|-v|--version|pinned)
             [[ $# -eq 0 ]] || die "too many arguments"
             ;;
-        list|update)
+        check)
+            if [[ $# -gt 0 ]]; then
+                package="$1"
+                packages=("$1")
+                shift
+            fi
+            [[ -n "$package" ]] || die "check requires a package name"
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        list|update|upgrade)
             if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
                 shift
             fi
@@ -91,6 +112,83 @@ parse_action_args() {
             [[ -n "$package" ]] || die "import-state requires a file path"
             [[ $# -eq 0 ]] || die "too many arguments"
             ;;
+        install|remove|uninstall)
+            # Strip --dry-run / -d before other flag processing
+            local _filtered=()
+            for _a in "$@"; do
+                case "$_a" in
+                    --dry-run|-d) dry_run=1 ;;
+                    *) _filtered+=("$_a") ;;
+                esac
+            done
+            set -- "${_filtered[@]+"${_filtered[@]}"}"
+            unset _filtered _a
+
+            while [[ $# -gt 0 ]]; do
+                if provider_candidate="$(provider_from_flag "$1" 2>/dev/null)"; then
+                    provider="$provider_candidate"
+                else
+                    packages+=("$1")
+                fi
+                shift
+            done
+            package="${packages[0]:-}"
+            ;;
+        pin|unpin|info|run|start)
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            if [[ $# -gt 0 ]]; then
+                package="$1"
+                packages=("$1")
+                shift
+            fi
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        bundle)
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            if [[ $# -gt 0 ]]; then
+                package="$1"
+                shift
+            fi
+            if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        sync)
+            if [[ $# -gt 0 && "$1" == "--generate" ]]; then
+                sync_generate=1
+                shift
+                if [[ $# -gt 0 && "$1" != -* ]]; then
+                    sync_output="$1"
+                    shift
+                fi
+            elif [[ $# -gt 0 ]]; then
+                package="$1"
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        history)
+            if [[ $# -gt 0 ]] && [[ "$1" =~ ^[0-9]+$ ]]; then
+                history_limit="$1"
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
+        discover)
+            if [[ $# -gt 0 ]]; then
+                package="$1"
+                shift
+            fi
+            [[ $# -eq 0 ]] || die "too many arguments"
+            ;;
         *)
             if [[ $# -gt 0 ]] && provider="$(provider_from_flag "$1")"; then
                 shift
@@ -98,6 +196,7 @@ parse_action_args() {
 
             if [[ $# -gt 0 ]]; then
                 package="$1"
+                packages=("$1")
                 shift
             fi
 
@@ -153,14 +252,19 @@ init_cli_context() {
     if [[ "$prog_name" == "tiny" || "$prog_name" == "tinypm" ]]; then
         action="${1:-help}"
         case "$action" in
-            i) action="install" ;;
-            s) action="search" ;;
-            r|rm|del) action="remove" ;;
-            u|up|upgrade) action="update" ;;
-            l|ls) action="list" ;;
-            v) action="version" ;;
-            st) action="start" ;;
+            i)              action="install" ;;
+            s)              action="search" ;;
+            r|rm|del)       action="remove" ;;
+            u|up|upgrade)   action="update" ;;
+            l|ls)           action="list" ;;
+            v)              action="version" ;;
+            st)             action="start" ;;
             addrepo|add-repo) action="add-repo" ;;
+            de)             action="de" ;;
+            h|hist)         action="history" ;;
+            p)              action="pin" ;;
+            b)              action="bundle" ;;
+            c|chk)          action="check" ;;
         esac
         shift || true
         parse_action_args "auto" "$@"

@@ -8,44 +8,53 @@ usage() {
     cat <<EOF2
 
 Usage:
-  $tinypm_engine_name --version
-  grab <package>
-  grab [-f|-flat|-flatpak|-s|-n] <package>
+  grab [-f|-flat|-flatpak|-s|-n] <package...>
+  grab --dry-run [-f|-flat|-flatpak|-s|-n] <package...>
   grab-add-repo <repo> [name]
-  tinypm add-repo <repo> [name]
   grab-de <desktop>
+  tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package...>
+  tinypm remove  [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package...>
+  tinypm update | upgrade [-f|-flat|-flatpak|-s|-n|--brew|--nix]
+  tinypm search  [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
+  tinypm info    <package>
+  tinypm check   <package>
+  tinypm list    [-f|-flat|-flatpak|-s|-n|--brew|--nix]
+  tinypm run | start [-f|-flat|-flatpak|-s] <app>
+  tinypm add-repo <repo> [name]
   tinypm de <desktop>
-  tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
-  tinypm search [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
-  tinypm remove [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package>
-  tinypm list [-f|-flat|-flatpak|-s|-n|--brew|--nix]
-  tinypm run [-f|-flat|-flatpak|-s] <app>
-  tinypm start [-f|-flat|-flatpak|-s] <app>
-  tinypm update [-f|-flat|-flatpak|-s|-n|--brew|--nix]
-  tinypm info <package>
   tinypm managed
+  tinypm pin <package>
+  tinypm unpin <package>
+  tinypm pinned
+  tinypm bundle list
+  tinypm bundle <category> [-f|-s|-n]
+  tinypm sync <manifest-file>
+  tinypm sync --generate [output-file]
+  tinypm history [N]
+  tinypm apps
+  tinypm discover [query]
   tinypm export-state [file]
   tinypm import-state <file>
   tinypm selftest
-  tinypm apps
-  tinypm discover [query]
   tinypm doctor [--fix]
   tinypm version
   tiny --version
   $tinypm_engine_name --version
-  grab firefox
+  Forge env | resolve | check | plan | --version
+  grab firefox vlc gimp
   syspm update
 
 Quick aliases:
-  tinypm i <pkg>         # install
+  tinypm i <pkg...>      # install
   tinypm s <query>       # search
-  tinypm r <pkg>         # remove
+  tinypm r <pkg...>      # remove
   tinypm u               # update
   tinypm ls              # list
   tinypm v               # version
-
-Primary command:
-  grab [-f|-flat|-flatpak|-s|-n] <package>
+  tinypm h [N]           # history
+  tinypm p <pkg>         # pin
+  tinypm b <category>    # bundle
+  tinypm c <pkg>         # check (Forge check)
 
 Flags:
   -f, -flat, -flatpak    use Flatpak
@@ -53,6 +62,7 @@ Flags:
   -n, --nat, --native    use detected native manager
   --brew                 force Homebrew backend
   --nix                  force Nix backend
+  -d, --dry-run          show plan without installing
 
 Native PM detection supports:
   apt, dnf, pacman, xbps, zypper, apk, emerge, brew, nix
@@ -73,6 +83,16 @@ Notes:
   add-repo routes to the native backend (PPA on apt, channel on Nix, tap on brew, ...).
   discover is a curated catalog, not every package everywhere.
   syspm routes TinyPM through the native system package manager only.
+  grab firefox vlc gimp          # install multiple at once
+  grab --dry-run firefox vlc     # dry-run via Forge plan
+  tinypm check firefox           # probe all backends + catalog
+  tinypm upgrade                 # alias for update
+  tinypm bundle Gaming           # install a whole category
+  tinypm sync packages.txt       # install from manifest
+  tinypm pin firefox             # skip during updates
+  Forge env                      # show engine environment
+  Forge resolve firefox          # which provider would be used
+  Forge plan -f firefox vlc      # dry-run install plan
 EOF2
 }
 
