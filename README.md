@@ -1,439 +1,306 @@
 <p align="center">
-  <img src="assets/TinyLogo.png" alt="TinyPM V4 Logo" width="500"/>
+  <img src="src/share/tinypm/assets/TinyLogo.png" alt="TinyPM V4 Logo" width="500"/>
 </p>
 
 <h1 align="center">TinyPM V4</h1>
 
 <p align="center">
-  Powered by <strong>Forge</strong>.<br>
-  A beginner-friendly Linux package wrapper for the Abora ecosystem, built on a NixOS base.
+  One friendly package command across mainstream Linux families.
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-4.0.0-blue.svg" alt="v4.0.0"/>
-  <img src="https://img.shields.io/badge/engine-Forge-1f6feb.svg" alt="Forge"/>
-  <img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="GPLv3"/>
-  <img src="https://img.shields.io/badge/platform-Linux-success.svg" alt="Linux"/>
-</p>
+TinyPM is a pure-Bash package-manager wrapper. V4 has one CLI and one runtime:
+there is no separate engine process or legacy V3 compatibility layer.
 
----
+## Quick start
 
-## TinyPM V4
+The two obvious scripts in the repository root are the intended entrypoints:
 
-TinyPM V4 is the complete overhaul of TinyPM.
+```bash
+./build.sh
+./install.sh
+grab --dry-run curl
+```
 
-The system name is `TinyPM V4`.
-The core engine name is `Forge`.
-
-Forge gives TinyPM one unified install flow across:
-
-- native package managers
-- Flatpak
-- Snap
-
-For Abora, the native path is Nix because Abora uses NixOS as its base.
-
-The main command is:
+They are lightweight links to the organized implementations in `scripts/`, so
+there is still only one build script and one installer to maintain.
 
 ```bash
 grab firefox vlc gimp
-```
-
-You can also inspect the engine directly:
-
-```bash
-Forge --version
-```
-
-If your system has more than one valid source available and you do not pass a flag, Forge asks which backend you want to use.
-
-Examples:
-
-```bash
-grab firefox
-grab -f org.mozilla.firefox
-grab -flat org.mozilla.firefox
-grab -flatpak org.mozilla.firefox
-grab -s firefox
-grab -n firefox
-```
-
----
-
-## Adding extra sources
-
-`grab-add-repo` is the Forge answer to `add-apt-repository`. It registers an
-extra source with your native backend, then `grab update` and `grab <package>`
-work as usual:
-
-```bash
-grab-add-repo ppa:hepp3n/cosmic-epoch
+grab search firefox
 grab update
-grab cosmic-session
+grab remove firefox
 ```
 
-You can also call it through the main CLI:
+## Build
+
+TinyPM has no compilation step, but release builds are validated and staged as
+self-contained runnable distributions:
 
 ```bash
-tinypm add-repo ppa:hepp3n/cosmic-epoch
+./build.sh
+./build/tinypm-v4/bin/tinypm help
+./build/tinypm-v4/bin/grab --dry-run curl
 ```
 
-Each backend has its own idea of an "extra source", so `grab-add-repo` routes
-the spec to the right call:
+The build produces:
 
-| Backend  | What `grab-add-repo` does |
-| -------- | ------------------------- |
-| `apt`    | `add-apt-repository -y <spec>` (installs `software-properties-common` if needed) |
-| `dnf`    | `dnf config-manager --add-repo <url>`, or `dnf copr enable` for `copr:owner/project` |
-| `zypper` | `zypper addrepo --refresh <url> [name]` |
-| `pacman` | appends `[name]` / `Server` to `/etc/pacman.conf` (use `name=url`) |
-| `apk`    | appends the URL to `/etc/apk/repositories` |
-| `xbps`   | writes the repository into `/etc/xbps.d/10-tinypm.conf` |
-| `brew`   | `brew tap <owner/repo>` |
-| `nix`    | `nix-channel --add <url> [name]` then `nix-channel --update` |
-
-### Abora / Nix
-
-Abora is NixOS-based, so `grab-add-repo` registers a **Nix channel** there.
-PPAs are Ubuntu-only and cannot translate, so pass a channel URL (with an
-optional name) instead:
-
-```bash
-grab-add-repo https://nixos.org/channels/nixos-unstable unstable
-grab cosmic-session
+```text
+build/
+├── tinypm-v4/
+│   ├── bin/            user commands
+│   ├── lib/tinypm/     internal runtime
+│   ├── share/tinypm/   catalog, flavors, assets
+│   └── scripts/        install/uninstall tools
+├── tinypm-v4.tar.gz    release archive
+└── SHA256SUMS           archive checksum
 ```
 
----
+The runnable folder only requires Bash and standard Unix utilities. The
+compressed archive and checksum are created when `tar` and `sha256sum` are
+available.
 
-## Installing a desktop environment
+Use `./build.sh --clean` to remove generated artifacts, or
+`./build.sh --output <directory>` to choose another output directory.
 
-`grab-de` installs a whole desktop environment with the right packages,
-display manager, and session for your backend:
-
-```bash
-grab-de cosmic        # also: gnome, plasma, xfce
-```
-
-Or through the main CLI:
+## Install
 
 ```bash
-tinypm de cosmic
-```
-
-It maps a logical name to each backend's reality:
-
-| DE       | pacman | apt | dnf | nix (declarative) |
-| -------- | ------ | --- | --- | ----------------- |
-| `cosmic` | `cosmic` group | `cosmic-session` | `@cosmic-desktop` | `services.desktopManager.cosmic.enable` |
-| `gnome`  | `gnome gdm` | `gnome-core gdm3` | `@gnome-desktop` | `services.desktopManager.gnome.enable` |
-| `plasma` | `plasma sddm` | `kde-plasma-desktop sddm` | `@kde-desktop` | `services.desktopManager.plasma6.enable` |
-| `xfce`   | `xfce4 lightdm` | `xfce4 lightdm` | `@xfce-desktop` | `services.xserver.desktopManager.xfce.enable` |
-
-On imperative distros it installs the packages and enables the display manager.
-
-### Abora / Nix
-
-On NixOS a desktop environment is **declarative** — installing it with
-`nix-env` would give you a broken half-session. So on Nix, `grab-de` prints the
-exact `configuration.nix` lines plus the rebuild command instead of installing:
-
-```bash
-grab-de cosmic
-# -> add to /etc/nixos/configuration.nix:
-#      services.desktopManager.cosmic.enable = true;
-#      services.displayManager.cosmic-greeter.enable = true;
-# -> then: sudo nixos-rebuild switch && reboot
-```
-
----
-
-## Abora / ANIX (declarative installs)
-
-Abora manages its system declaratively through **ANIX** (`/etc/nixos/anix.nix`,
-applied with `anix apply`). When the `anix` tool is present, TinyPM stops doing
-imperative `nix-env` installs and instead edits the ANIX config, so `grab`
-changes are declarative and survive system rebuilds:
-
-```bash
-grab firefox       # -> anix package add firefox   ; anix apply
-grab remove htop   # -> anix package remove htop   ; anix apply
-grab-de gnome      # -> anix set desktop gnome      ; anix apply
-```
-
-This only activates when `anix` is installed. On plain NixOS (no ANIX) or any
-other distro, behavior is unchanged.
-
-Environment overrides:
-
-- `TINYPM_NO_ANIX=1` — ignore ANIX and use `nix-env` directly
-- `TINYPM_ANIX_APPLY=0` — update `anix.nix` but skip the rebuild (run `anix apply` yourself)
-
-Desktops ANIX doesn't model (e.g. `cosmic`) fall back to the printed
-`configuration.nix` instructions.
-
----
-
-## What's New in V4
-
-- **Forge engine** — replaces Parcel; `Parcel` still works as a backward-compat alias
-- **Multi-package install** — `grab firefox vlc gimp` installs all three in one command
-- **`pin` / `unpin`** — lock a package so it is skipped during updates
-- **`bundle`** — install all catalog entries in a category: `tinypm bundle Gaming`
-- **`sync`** — install from a package manifest file, or generate one from tracked packages
-- **`history`** — view the full install/remove event log
-- **97-entry curated catalog** — expanded with Gaming, Editor, Utility, and more categories
-- **`lib/providers/native.sh`** — the native PM provider is now correctly named
-- **Forge doctor** — updated with Forge symlink check and catalog entry count
-
----
-
-## Features
-
-- Primary install command: `grab [packages...]`
-- Engine command: `Forge --version`
-- Compat alias: `Parcel --version`
-- Main CLI: `tinypm`
-- Native-only wrapper: `syspm`
-- Flatpak, Snap, and native package support
-- Automatic backend detection
-- Interactive backend choice when multiple sources are available
-- Multi-package install and remove
-- Managed package tracking
-- Pin/unpin packages to control update behavior
-- Bundle install by catalog category
-- Sync packages from a manifest file
-- Install/remove history log
-- 97-entry curated discover catalog
-- `tinypm doctor --fix`
-- `tinypm export-state` and `tinypm import-state`
-
----
-
-## Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/AnimatedGTVR/TinyPM.git
-cd TinyPM
-```
-
-Install TinyPM V4:
-
-```bash
-chmod +x install.sh
 ./install.sh
-```
-
-Use the Abora flavor:
-
-```bash
-TINYPM_FLAVOR=abora ./install.sh
-```
-
-The installer will:
-
-- install TinyPM into `~/.tinypm`
-- link commands into `~/.local/bin`
-- expose `tinypm`, `tiny`, `grab`, `syspm`, `version`, `Forge`, and `Parcel`
-- detect your native package manager automatically
-- prefer `nix` automatically on NixOS-based systems like Abora
-
-Then test it:
-
-```bash
 export PATH="$HOME/.local/bin:$PATH"
-hash -r
-grab firefox vlc
-tinypm bundle Gaming
-tinypm doctor
-tiny --version
-Forge --version
-syspm update
+grab firefox
 ```
 
----
+The installer places the runtime in `~/.tinypm/bin` and launchers in
+`~/.local/bin`. It detects the native package manager automatically. Override
+it for a specific system or image:
+
+```bash
+./install.sh --native apk -y
+TINYPM_FLAVOR=abora ./install.sh --native nix -y
+```
+
+Tab completion is installed automatically for Bash, Zsh, and Fish. Open a new
+shell after installation, then try `grab ex<Tab>` or `grab --pa<Tab>`.
 
 ## Commands
 
-### Main
+`grab` is install-first but also accepts TinyPM subcommands:
 
 ```bash
-grab [-f|-flat|-flatpak|-s|-n] <package...>
-grab-add-repo <repo> [name]
-grab-de <desktop>
-Forge --version
-Parcel --version
-tinypm install [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package...>
-tinypm add-repo <repo> [name]
-tinypm de <desktop>
-tinypm search [-f|-flat|-flatpak|-s|-n|--brew|--nix] <query>
-tinypm remove [-f|-flat|-flatpak|-s|-n|--brew|--nix] <package...>
-tinypm list [-f|-flat|-flatpak|-s|-n|--brew|--nix]
-tinypm update [-f|-flat|-flatpak|-s|-n|--brew|--nix]
-tinypm info <package>
+grab <package...>                  # install
+grab -- <package...>               # force literal package names
+grab install <package...>          # explicit install
+grab --dry-run <package...>        # preview an install
+grab search <query>
+grab remove <package...>
+grab update
+grab list
+grab info <package>
+grab check <package>
+grab explain <package>
+grab undo                            # preview the last reversal
+grab undo --yes                      # perform it
+grab doctor
+```
+
+Friendly package aliases are translated for the selected distro. For example,
+`gcc++` and `g++` resolve to `gcc` on Arch, `g++` on Debian/Alpine, and
+`gcc-c++` on Fedora/openSUSE. If two names resolve to the same package in one
+batch, TinyPM installs it once and reports the duplicate separately.
+Packages that are already installed are detected before the transaction, so
+TinyPM does not ask the native manager to reinstall them.
+
+Common command typos are rejected before a provider is called. For example,
+`grab udpate` suggests `grab update` instead of trying to install a package
+named `udpate`. Use `grab -- udpate` when that package name is intentional.
+
+Interactive installs use a colored Pac-Man chase animation. Redirected output
+and CI remain plain and stable.
+
+Use `explain` to inspect resolution without changing the system:
+
+```text
+$ grab explain --pacman gcc++
+Package resolution
+  Requested     gcc++
+  Resolved      gcc
+  Provider      Pacman
+  Description   The GNU Compiler Collection - C and C++ frontends
+  Reason        Arch provides GCC and G++ together in the gcc package
+  Command       pacman -S --noconfirm gcc
+```
+
+Friendly names live in `src/share/tinypm/aliases.tsv`, so mappings can be
+reviewed and extended without changing provider execution code.
+
+The full CLI exposes package tracking and higher-level workflows:
+
+```bash
 tinypm managed
-tinypm pin <package>
-tinypm unpin <package>
-tinypm pinned
+tinypm pin firefox
+tinypm unpin firefox
+tinypm history 100
+tinypm undo
 tinypm bundle list
-tinypm bundle <category> [-f|-s|-n]
-tinypm sync <manifest-file>
-tinypm sync --generate [output-file]
-tinypm history [N]
-tinypm discover [query]
-tinypm doctor [--fix]
-tinypm export-state [file]
-tinypm import-state <file>
-tinypm version
+tinypm bundle Gaming
+tinypm sync packages.txt
+tinypm sync --generate packages.txt
+tinypm discover editor
+tinypm apps
+tinypm doctor --fix
+tinypm selftest
 ```
 
-Quick forms:
+Provider flags can appear before or after a package where appropriate:
+
+| Flag | Provider |
+| --- | --- |
+| `-n`, `--native` | detected native package manager |
+| `-f`, `-flatpak` | Flatpak |
+| `-s`, `--snap` | Snap |
+| `--apk` | Alpine APK |
+| `--apt` | APT |
+| `--dnf` | DNF |
+| `--pacman` | Pacman |
+| `--xbps` | XBPS |
+| `--zypper` | Zypper |
+| `--emerge` | Portage |
+| `--eopkg` | Solus eopkg |
+| `--swupd` | Clear Linux swupd |
+| `--slackpkg` | Slackware slackpkg |
+| `--opkg` | OpenWrt opkg |
+| `--urpmi` | Mageia URPMI |
+| `--guix` | GNU Guix |
+| `--brew` | Homebrew |
+| `--nix` | Nix |
+
+## Alpine Linux
+
+Alpine is a first-class V4 backend:
 
 ```bash
-tinypm i firefox vlc      # install multiple
-tinypm s blender          # search
-tinypm r htop             # remove
-tinypm u                  # update all
-tinypm ls                 # list installed
-tinypm v                  # version
-tinypm h                  # history (last 50)
-tinypm p firefox          # pin
-tinypm b Gaming           # bundle category
+./install.sh --native apk -y
+grab --apk curl bash git
+grab search --apk neovim
+grab update --apk
+grab remove --apk curl
 ```
 
-### Pin / Unpin
+Repository URLs can optionally receive an APK tag. Additions are idempotent
+and refresh repository metadata without upgrading the system:
 
 ```bash
-tinypm pin firefox        # prevent firefox from being upgraded
-tinypm unpin firefox      # re-enable upgrades for firefox
-tinypm pinned             # show all pinned packages
+grab-add-repo --apk \
+  https://dl-cdn.alpinelinux.org/alpine/edge/community edge
+
+# writes: @edge https://dl-cdn.alpinelinux.org/alpine/edge/community
+grab --apk package@edge
 ```
 
-### Bundle
+## Other repositories
+
+`grab-add-repo` maps the source to the detected native backend:
 
 ```bash
-tinypm bundle list        # list available categories and package counts
-tinypm bundle Gaming      # install all Gaming entries from catalog
-tinypm bundle Creative -f # install Creative entries via Flatpak only
+grab-add-repo ppa:owner/project                            # APT
+grab-add-repo --dnf copr:owner/project                    # DNF COPR
+grab-add-repo --pacman 'myrepo=https://example/$arch'     # Pacman
+grab-add-repo --nix https://nixos.org/channels/nixos-unstable unstable
+grab-add-repo --brew owner/tap
 ```
 
-### Sync
+Supported repository types include APT repositories and PPAs, DNF repos and
+COPR, Zypper repos, APK repositories, Pacman servers, XBPS repos, Homebrew taps,
+eopkg repositories, URPMI media, opkg feeds, and Nix channels. Declarative or
+specialized source systems such as Guix channels, Portage overlays, swupd
+mixers, and slackpkg mirrors receive instructions instead of unsafe edits.
+
+## Distribution coverage
+
+TinyPM detects these native managers:
+
+```text
+apt      Debian, Ubuntu, Mint, Pop!_OS, Kali, and derivatives
+dnf      Fedora, RHEL, CentOS Stream, Rocky, AlmaLinux
+pacman   Arch, Manjaro, EndeavourOS, Garuda, CachyOS
+zypper   openSUSE and SUSE
+apk      Alpine
+xbps     Void Linux
+emerge   Gentoo
+eopkg    Solus
+swupd    Clear Linux
+slackpkg Slackware
+opkg     OpenWrt 24.10 and older, plus embedded Linux
+urpmi    Mageia
+guix     GNU Guix System
+nix      NixOS and Abora
+brew     Linuxbrew and macOS
+```
+
+Flatpak and Snap remain optional. TinyPM cannot honestly guarantee every
+future or private distribution, but unsupported systems now fail clearly
+instead of guessing or running the wrong package manager.
+
+TinyPM refreshes opkg metadata without mass-upgrading OpenWrt. OpenWrt warns
+that a blanket `opkg upgrade` can soft-brick devices; newer OpenWrt releases
+use the APK backend automatically.
+
+## Desktop environments and Abora
+
+`grab-de` installs supported desktop environments on imperative distributions:
 
 ```bash
-tinypm sync packages.txt          # install from manifest
-tinypm sync --generate            # write tinypm-packages.txt from tracked packages
-tinypm sync --generate backup.txt # write to a specific file
+grab-de gnome       # also plasma, xfce, cosmic
 ```
 
-Manifest format:
-
-```
-# TinyPM V4 package manifest
-# Lines: [provider:]package
-
-flatpak:org.mozilla.firefox
-snap:spotify
-native:htop
-curl
-```
-
-### History
+NixOS desktop environments are declarative, so TinyPM prints the required
+`configuration.nix` settings instead of creating an incomplete `nix-env`
+profile. On Abora, TinyPM uses ANIX when it is installed:
 
 ```bash
-tinypm history       # show last 50 events
-tinypm history 100   # show last 100 events
+grab firefox        # anix package add firefox; anix apply
+grab remove firefox # anix package remove firefox; anix apply
+grab-de gnome       # anix set desktop gnome; anix apply
 ```
 
-### Native only (syspm)
+Set `TINYPM_NO_ANIX=1` to use the normal Nix path or `TINYPM_ANIX_APPLY=0` to
+edit the ANIX configuration without applying it immediately.
+
+## Colors and automation
+
+Color is enabled on interactive terminals. The conventional `NO_COLOR`
+environment variable disables it; `FORCE_COLOR=1` enables it for redirected
+output. Set `TINYPM_NO_SPINNER=1` for clean automation logs.
+
+## Development
 
 ```bash
-syspm install <package> [<package>...]
-syspm search <query>
-syspm remove <package> [<package>...]
-syspm list
-syspm pin <package>
-syspm unpin <package>
-syspm pinned
-syspm update
-syspm version
+./build.sh
+./scripts/e2e-smoke.sh
+shellcheck -x -e SC1090 -e SC1091 \
+  scripts/*.sh src/bin/* src/lib/tinypm/core/*.sh \
+  src/lib/tinypm/providers/*.sh
 ```
 
----
+The smoke suite validates source commands, color behavior, the runnable build,
+a clean installation, flavor installation, and install/search/update/repository
+flows against a fake Alpine APK backend. CI also runs the suite in Ubuntu,
+Fedora, Arch, Alpine, and openSUSE containers.
 
-## Backend Rules
+## Project layout
 
-Forge supports these native package managers:
-
-- `apt`
-- `dnf`
-- `pacman`
-- `xbps`
-- `zypper`
-- `apk`
-- `emerge`
-- `brew`
-- `nix`
-
-Abora note:
-
-- Abora is NixOS-based, so Forge prefers `nix` as the native backend
-- `syspm` on Abora routes through the native Nix path
-
-Flags:
-
-- `-n`, `--native` forces the native package manager
-- `-f`, `-flat`, `-flatpak` forces Flatpak
-- `-s`, `--snap` forces Snap
-
----
-
-## Catalog
-
-TinyPM V4 ships with a 97-entry curated catalog covering:
-
-| Category     | Entries |
-|--------------|---------|
-| Communication | 8      |
-| Creative     | 12      |
-| Development  | 9       |
-| Editor       | 5       |
-| Gaming       | 9       |
-| Internet     | 8       |
-| Media        | 11      |
-| Productivity | 6       |
-| Security     | 4       |
-| System       | 15      |
-| Utility      | 10      |
-
-Browse or search:
-
-```bash
-tinypm discover            # all entries
-tinypm discover gaming     # filter by keyword
-tinypm bundle list         # categories with counts
+```text
+src/bin/                    source command entrypoints
+src/lib/tinypm/core/        parsing, actions, state, history, UI
+src/lib/tinypm/providers/   native, Flatpak, Snap, repo, DE, ANIX
+src/share/tinypm/           catalogs, flavors, and assets
+scripts/build.sh            release builder
+scripts/install.sh          local installer
+scripts/e2e-smoke.sh        cross-backend smoke suite
+tests/resolver.sh            focused alias and resolution tests
+build/tinypm-v4/bin/        generated commands for testing/use
+build.sh, install.sh         discoverable root links to scripts/
 ```
 
----
-
-## Project Shape
-
-TinyPM V4 is intentionally modular.
-
-- `tinypm`: main CLI
-- `grab`: install-first entrypoint
-- `Forge`: core engine identity/version entrypoint
-- `Parcel`: backward-compat alias for Forge (V3 name)
-- `syspm`: native-only wrapper
-- `version`: version and system report
-- `lib/core/`: config, args, actions, state, history, doctor, UI
-- `lib/providers/`: native, Flatpak, Snap
-- `share/`: logo and curated catalog
-
----
-
-## License
-
-TinyPM V4 is licensed under the GNU General Public License v3.0.
-
-See [LICENSE](LICENSE) for the full text.
+TinyPM V4 is licensed under the GNU General Public License v3.0. See
+[LICENSE](LICENSE).

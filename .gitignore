@@ -1,5 +1,7 @@
-<<<<<<< HEAD
-# Never commit runtime install folders
+# Generated build artifacts
+build/
+
+# Runtime data
 .atiny/
 logs/
 cache/
@@ -9,7 +11,9 @@ registry/
 config/
 *.log
 
-# OS junk
+# Language and OS junk
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
 
@@ -19,7 +23,3 @@ Thumbs.db
 *.swp
 *.swo
 *~
-=======
-__pycache__/
-*.pyc
->>>>>>> f281edf (Initial TinyPM release)

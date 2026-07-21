@@ -20,31 +20,24 @@ jobs:
       - name: Syntax checks (bash -n)
         run: |
           bash -n \
-            ./grab \
-            ./tinypm \
-            ./syspm.sh \
-            ./version \
+            ./build.sh \
             ./install.sh \
-            ./uninstall.sh \
-            ./scripts/install.sh \
-            ./scripts/uninstall.sh \
-            ./lib/core/*.sh \
-            ./lib/providers/*.sh
+            ./scripts/*.sh \
+            ./tests/*.sh \
+            ./src/bin/* \
+            ./src/lib/tinypm/core/*.sh \
+            ./src/lib/tinypm/providers/*.sh
 
       - name: Lint scripts (shellcheck)
         run: |
           shellcheck -x -e SC1090 -e SC1091 \
-            ./grab \
-            ./tinypm \
-            ./syspm.sh \
-            ./version \
+            ./build.sh \
             ./install.sh \
-            ./uninstall.sh \
-            ./scripts/install.sh \
-            ./scripts/uninstall.sh \
-            ./scripts/e2e-smoke.sh \
-            ./lib/core/*.sh \
-            ./lib/providers/*.sh
+            ./scripts/*.sh \
+            ./tests/*.sh \
+            ./src/bin/* \
+            ./src/lib/tinypm/core/*.sh \
+            ./src/lib/tinypm/providers/*.sh
 
       - name: End-to-end smoke
         run: ./scripts/e2e-smoke.sh

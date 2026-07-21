@@ -21,4 +21,4 @@ else
     git clone https://github.com/AnimatedGTVR/TinyPM.git "$REPO_DIR"
 fi
 
-exec "$REPO_DIR/install.sh"
+exec "$REPO_DIR/scripts/install.sh"
