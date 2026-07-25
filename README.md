@@ -540,8 +540,3 @@ install.sh                   Root installation entrypoint
 TinyPM V4 is licensed under the GNU General Public License v3.0.
 
 See [LICENSE](LICENSE) for the complete license text.
-
-```
-
-This version keeps all the technical detail, but makes the README much easier to scan. I also moved the strongest selling points near the top, reduced repeated wording, converted the long provider and distro sections into tables, and made the Abora/ANIX behavior clearer.
-```
