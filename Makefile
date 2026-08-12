@@ -1,16 +1,26 @@
-.PHONY: build clean install uninstall test
+.PHONY: audit build check clean install package release-check test
 
 build:
-	./scripts/build.sh
+	cargo build --release --locked
 
 clean:
-	./scripts/build.sh --clean
+	cargo clean
 
 install:
-	./scripts/install.sh
-
-uninstall:
-	./scripts/uninstall.sh
+	cargo install --path . --locked
 
 test:
-	./scripts/e2e-smoke.sh
+	cargo test --locked
+
+check:
+	cargo fmt --check
+	cargo clippy --all-targets --all-features --locked -- -D warnings
+	cargo test --locked
+
+audit:
+	cargo audit --deny warnings
+
+package:
+	cargo package --locked --allow-dirty
+
+release-check: check audit package build

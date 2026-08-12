@@ -1,49 +1,25 @@
-# TinyPM V4 development guide
+# TinyPM Rust development guide
 
-TinyPM is a pure-Bash, beginner-friendly package wrapper. V4 has one runtime
-and no separate engine layer. The public install-first command is `grab`; the
-complete CLI is `tinypm`.
+TinyPM is a Rust package-manager frontend. The current version is
+`0.8.1-alpha`; the planned stable release is `0.10.0`.
 
 ## Verification
 
-```bash
-./scripts/build.sh
-./scripts/e2e-smoke.sh
+```console
+make release-check
 ```
 
-CI additionally runs ShellCheck and executes the smoke suite in Ubuntu,
-Fedora, Arch, Alpine, and openSUSE containers.
+CI additionally checks the Rust 1.85 minimum, GNU/musl cross-targets, and
+provider detection in representative distribution containers.
 
 ## Architecture
 
-- `src/bin/tinypm` sources modules in order and dispatches the parsed action.
-- `src/lib/tinypm/core/args.sh` implements multicall behavior.
-- `src/lib/tinypm/core/actions.sh` orchestrates providers and state/history.
-- `src/lib/tinypm/providers/native.sh` is the native implementation.
-- Every external backend call goes through `backend_run`, `backend_exec`, or
-  `backend_run_root` so host/Flatpak and authentication behavior stays intact.
-- `src/lib/tinypm/core/inspect.sh` implements checks and dry-run plans.
-- `scripts/build.sh` stages a validated runtime under `build/tinypm-v4/`.
+- `src/main.rs` and `src/bin/grab.rs` own the process boundaries.
+- `src/cli.rs` parses commands and preserves the install-first `grab` UX.
+- `src/provider.rs` detects providers and builds typed command specifications.
+- All external commands must use argument vectors. Never construct a command
+  through a shell or interpolate package names into shell source.
+- Package-changing behavior must support `--dry-run`.
 
-## Important behavior
-
-- `grab firefox` installs, while reserved command words dispatch normally:
-  `grab update`, `grab search firefox`, and `grab remove firefox`.
-- Provider values flow as `auto`, `flatpak`, `snap`, `native`, or a specific
-  supported native manager. Keep manager lists synchronized across common,
-  native, inspect, installer, UI, and tests.
-- Adding a repository refreshes metadata with `native_refresh`; it must never
-  perform a full package upgrade.
-- APK repository additions support optional tags and must remain idempotent.
-- Color follows `NO_COLOR` and `FORCE_COLOR`. Non-interactive commands bypass
-  the spinner; `TINYPM_NO_SPINNER=1` forces that behavior.
-- NixOS desktop environments are declarative. Abora uses ANIX when available.
-
-## Adding a command
-
-Wire its launcher/multicall name in `src/lib/tinypm/core/args.sh`, add its case
-in `src/bin/tinypm`, implement orchestration under core, update installer and
-doctor launchers if needed, then extend `scripts/e2e-smoke.sh`.
-
-Keep output beginner-friendly, shell code readable, and backend operations
-behind the shared helpers.
+The old Bash runtime was removed. Refer to Git history when checking legacy
+behavior; do not add shell execution or shell-sourced runtime modules.

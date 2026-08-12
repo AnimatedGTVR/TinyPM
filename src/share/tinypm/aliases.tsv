@@ -11,8 +11,8 @@ zypper	gcc++	gcc-c++	openSUSE packages the C++ compiler as gcc-c++
 zypper	g++	gcc-c++	openSUSE packages the C++ compiler as gcc-c++
 apk	gcc++	g++	Alpine packages the C++ compiler as g++
 apk	g++	g++	Alpine packages the C++ compiler as g++
-emerge	gcc++	gcc	Gentoo provides the C++ frontend through GCC
-emerge	g++	gcc	Gentoo provides the C++ frontend through GCC
+portage	gcc++	gcc	Gentoo provides the C++ frontend through GCC
+portage	g++	gcc	Gentoo provides the C++ frontend through GCC
 eopkg	gcc++	gcc	Solus provides the C++ frontend through GCC
 eopkg	g++	gcc	Solus provides the C++ frontend through GCC
 swupd	gcc	c-basic	Clear Linux ships its compiler toolchain in the c-basic bundle
